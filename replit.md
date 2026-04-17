@@ -31,13 +31,18 @@ Full-stack Arabic productivity app for tracking commitments to say "No". Users r
 ## API Routes
 
 - `GET/POST/PATCH/DELETE /api/log-entries` — CRUD for log entries
-- `GET/POST/PATCH/DELETE /api/daily-items` — daily plan items
+- `GET /api/daily-items?date=yyyy-MM-dd` — get items for a specific date (defaults to today)
+- `POST /api/daily-items` — create daily item
+- `PATCH/DELETE /api/daily-items/:id` — update/delete daily item
+- `POST /api/daily-items/archive` — move items from a date into log_entries then delete them
+- `GET /api/daily-items/past-dates` — returns dates with un-archived items older than today
 - `GET/POST/DELETE /api/master-rules` — permanent rules
 - `GET/PUT /api/priorities` — today's priorities (upsert by date)
 - `GET/POST/DELETE /api/if-then` — conditional plans
 - `GET /api/dashboard/stats` — KPI summary (totalNos, weekNos, hoursRecovered, commitmentRate, streak)
 - `GET /api/dashboard/activity` — last 14 days daily counts
 - `GET /api/dashboard/by-category` — category breakdown
+- `GET /api/export?format=json|csv` — full data export (all 5 tables)
 
 ## Key Commands
 

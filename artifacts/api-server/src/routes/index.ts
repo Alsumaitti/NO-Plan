@@ -6,6 +6,7 @@ import masterRulesRouter from "./masterRules";
 import prioritiesRouter from "./priorities";
 import ifThenRouter from "./ifThenPlans";
 import dashboardRouter from "./dashboard";
+import exportRouter from "./export";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(masterRulesRouter);
 router.use(prioritiesRouter);
 router.use(ifThenRouter);
 router.use(dashboardRouter);
+router.use(exportRouter);
 
 export default router;
