@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+<title>متتبّع الإزالة — ما لن أفعله</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800;900&family=Reem+Kufi:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#0F1B2D;
+    --ink-2:#1E2D46;
+    --parchment:#FBF7EF;
+    --parchment-2:#F5EFE2;
+    --gold:#C9A14A;
+    --gold-deep:#8A6A22;
+    --teal:#0E5B5B;
+    --teal-light:#1C8383;
+    --coral:#C8553D;
+    --coral-light:#E07A5F;
+    --sage:#6B8E4E;
+    --cream:#F0E6D2;
+    --border:#E6DCC5;
+    --shadow: 0 10px 30px rgba(15,27,45,.08), 0 4px 10px rgba(15,27,45,.04);
+    --shadow-lg: 0 20px 60px rgba(15,27,45,.15), 0 8px 20px rgba(15,27,45,.08);
+    --radius: 18px;
+    --radius-sm: 12px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{overflow-x:hidden}
+  body{
+    font-family:'Tajawal',system-ui,sans-serif;
+    background:var(--parchment);
+    color:var(--ink);
+    min-height:100vh;
+    line-height:1.6;
+    background-image:
+      radial-gradient(at 15% 10%, rgba(201,161,74,.08) 0%, transparent 45%),
+      radial-gradient(at 85% 80%, rgba(14,91,91,.06) 0%, transparent 45%),
+      radial-gradient(at 50% 50%, rgba(200,85,61,.04) 0%, transparent 60%);
+  }
+
+  /* Arabic typography */
+  h1,h2,h3,h4,.display{font-family:'Reem Kufi','Tajawal',sans-serif;letter-spacing:-.01em}
+  .quote-ar{font-family:'Amiri',serif}
+
+  /* Container */
+  .app{max-width:1400px;margin:0 auto;padding:clamp(12px,3vw,32px)}
+
+  /* Header */
+  .header{
+    position:relative;
+    background:linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%);
+    border-radius:var(--radius);
+    padding:clamp(24px,5vw,48px) clamp(20px,4vw,44px);
+    color:var(--parchment);
+    overflow:hidden;
+    box-shadow:var(--shadow-lg);
+    margin-bottom:clamp(16px,3vw,28px);
+  }
+  .header::before{
+    content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(201,161,74,.25) 0%, transparent 40%),
+      radial-gradient(circle at 90% 100%, rgba(14,91,91,.35) 0%, transparent 45%);
+    pointer-events:none;
+  }
+  .header::after{
+    content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(251,247,239,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(251,247,239,.04) 1px, transparent 1px);
+    background-size:40px 40px;
+    pointer-events:none;mask-image:radial-gradient(ellipse at center,black 40%,transparent 80%);
+  }
+  .header-content{position:relative;z-index:2;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between}
+  .title-block{flex:1 1 320px}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:clamp(11px,1.2vw,13px);letter-spacing:.25em;
+    color:var(--gold);font-weight:500;margin-bottom:14px;
+    text-transform:uppercase;
+  }
+  .eyebrow::before{content:"";width:32px;height:1px;background:var(--gold)}
+  .main-title{
+    font-size:clamp(28px,4.5vw,48px);font-weight:700;line-height:1.1;
+    background:linear-gradient(135deg,var(--parchment) 0%, var(--gold) 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  }
+  .subtitle{
+    color:rgba(251,247,239,.75);font-size:clamp(14px,1.6vw,17px);
+    margin-top:10px;max-width:620px;font-weight:300;
+  }
+  .today-date{
+    font-family:'Amiri',serif;
+    color:var(--gold);font-size:clamp(14px,1.6vw,17px);
+    padding:10px 20px;background:rgba(201,161,74,.1);
+    border:1px solid rgba(201,161,74,.3);border-radius:99px;
+    white-space:nowrap;
+  }
+
+  /* Tabs */
+  .tabs{
+    display:flex;gap:6px;margin-bottom:clamp(16px,3vw,24px);
+    background:var(--parchment-2);padding:6px;border-radius:16px;
+    overflow-x:auto;scrollbar-width:none;border:1px solid var(--border);
+    box-shadow:inset 0 1px 2px rgba(15,27,45,.04);
+  }
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{
+    flex:1 1 auto;min-width:max-content;
+    padding:12px 18px;border:none;background:transparent;
+    font-family:'Tajawal',sans-serif;font-size:14px;font-weight:600;
+    color:var(--ink-2);cursor:pointer;border-radius:10px;
+    transition:all .25s ease;white-space:nowrap;
+    display:flex;align-items:center;gap:8px;justify-content:center;
+  }
+  .tab:hover{background:rgba(201,161,74,.08);color:var(--ink)}
+  .tab.active{
+    background:var(--ink);color:var(--parchment);
+    box-shadow:0 4px 14px rgba(15,27,45,.25);
+  }
+  .tab-icon{font-size:16px}
+
+  /* Tab panels */
+  .panel{display:none;animation:fadeIn .4s ease}
+  .panel.active{display:block}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+  /* Cards */
+  .card{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:clamp(18px,2.5vw,28px);box-shadow:var(--shadow);
+    position:relative;overflow:hidden;
+  }
+  .card-title{
+    font-size:clamp(16px,2vw,20px);font-weight:700;color:var(--ink);
+    margin-bottom:6px;display:flex;align-items:center;gap:10px;
+  }
+  .card-title-icon{
+    width:36px;height:36px;border-radius:10px;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:18px;flex-shrink:0;
+  }
+  .card-subtitle{color:#6B7280;font-size:13px;margin-bottom:18px;font-weight:400}
+
+  /* Dashboard grid */
+  .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-bottom:20px}
+
+  .kpi{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:22px;position:relative;overflow:hidden;
+    transition:transform .25s ease, box-shadow .25s ease;
+    box-shadow:var(--shadow);
+  }
+  .kpi:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg)}
+  .kpi::before{
+    content:"";position:absolute;top:0;right:0;left:0;height:3px;
+  }
+  .kpi.c1::before{background:linear-gradient(90deg,var(--coral),var(--coral-light))}
+  .kpi.c2::before{background:linear-gradient(90deg,var(--gold),var(--gold-deep))}
+  .kpi.c3::before{background:linear-gradient(90deg,var(--teal),var(--teal-light))}
+  .kpi.c4::before{background:linear-gradient(90deg,var(--sage),#8DAD6D)}
+
+  .kpi-label{
+    font-size:12px;letter-spacing:.15em;color:#6B7280;
+    text-transform:uppercase;font-weight:600;margin-bottom:8px;
+  }
+  .kpi-value{
+    font-family:'Reem Kufi',sans-serif;
+    font-size:clamp(32px,4vw,44px);font-weight:700;color:var(--ink);line-height:1;
+    display:flex;align-items:baseline;gap:6px;
+  }
+  .kpi-unit{font-size:14px;color:#9CA3AF;font-weight:400}
+  .kpi-trend{font-size:12px;margin-top:6px;color:#6B7280}
+  .kpi-icon{
+    position:absolute;bottom:14px;left:14px;
+    font-size:40px;opacity:.08;
+  }
+
+  /* Progress ring */
+  .progress-ring-wrap{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+  }
+  .progress-ring{position:relative;width:88px;height:88px;flex-shrink:0}
+  .progress-ring svg{transform:rotate(-90deg)}
+  .progress-ring-bg{stroke:var(--parchment-2)}
+  .progress-ring-fg{stroke:var(--sage);transition:stroke-dashoffset .8s cubic-bezier(.4,0,.2,1)}
+  .progress-ring-text{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Reem Kufi',sans-serif;font-size:18px;font-weight:700;color:var(--ink);
+  }
+
+  /* Two-column dashboard */
+  .dash-row{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px}
+  @media(max-width:900px){.dash-row{grid-template-columns:1fr}}
+
+  /* Chart card */
+  .chart-card{min-height:320px}
+  .chart-wrap{position:relative;height:260px;width:100%}
+
+  /* Progress bars in dashboard */
+  .progress-list{display:flex;flex-direction:column;gap:16px}
+  .progress-item{}
+  .progress-head{display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px}
+  .progress-head .pct{color:var(--teal);font-family:'Reem Kufi',sans-serif}
+  .progress-bar{
+    width:100%;height:10px;background:var(--parchment-2);border-radius:99px;overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .progress-fill{
+    height:100%;border-radius:99px;
+    background:linear-gradient(90deg,var(--teal),var(--teal-light));
+    transition:width .8s cubic-bezier(.4,0,.2,1);
+    position:relative;
+  }
+  .progress-fill.coral{background:linear-gradient(90deg,var(--coral),var(--coral-light))}
+  .progress-fill.gold{background:linear-gradient(90deg,var(--gold-deep),var(--gold))}
+  .progress-fill.sage{background:linear-gradient(90deg,var(--sage),#8DAD6D)}
+
+  /* Streak display */
+  .streak-card{
+    background:linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%);
+    color:var(--parchment);text-align:center;padding:28px 20px;
+    border:none;position:relative;overflow:hidden;
+  }
+  .streak-card::before{
+    content:"";position:absolute;inset:0;
+    background:radial-gradient(circle at 50% 0%, rgba(201,161,74,.3) 0%, transparent 60%);
+  }
+  .streak-num{
+    font-family:'Reem Kufi',sans-serif;
+    font-size:56px;font-weight:700;line-height:1;
+    background:linear-gradient(135deg,var(--gold) 0%, #E8C46F 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+    position:relative;
+  }
+  .streak-label{font-size:13px;color:rgba(251,247,239,.7);margin-top:8px;letter-spacing:.1em;position:relative}
+  .streak-flames{font-size:24px;margin-top:10px;position:relative;letter-spacing:4px}
+
+  /* Quote banner */
+  .quote-banner{
+    background:linear-gradient(135deg, var(--cream) 0%, var(--parchment-2) 100%);
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:clamp(20px,3vw,32px);margin-bottom:20px;
+    position:relative;overflow:hidden;
+  }
+  .quote-banner::before{
+    content:"";position:absolute;top:-20px;right:20px;
+    font-family:'Amiri',serif;font-size:140px;color:var(--gold);opacity:.15;line-height:1;
+  }
+  .quote-banner::after{content:"“";position:absolute;top:-20px;right:20px;
+    font-family:'Amiri',serif;font-size:140px;color:var(--gold);opacity:.15;line-height:1;}
+  .quote-text{
+    font-family:'Amiri',serif;font-size:clamp(16px,2vw,20px);
+    color:var(--ink);font-style:italic;line-height:1.8;position:relative;z-index:2;
+  }
+  .quote-author{color:var(--gold-deep);font-size:13px;margin-top:10px;position:relative;z-index:2}
+
+  /* Section headers */
+  .section-header{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    margin-bottom:16px;flex-wrap:wrap;
+  }
+  .section-title{
+    font-size:clamp(18px,2.4vw,24px);font-weight:700;
+    display:flex;align-items:center;gap:12px;color:var(--ink);
+  }
+  .section-title::before{
+    content:"";width:4px;height:24px;border-radius:2px;
+    background:linear-gradient(180deg,var(--gold),var(--gold-deep));
+  }
+
+  /* Buttons */
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;justify-content:center;
+    padding:10px 18px;border-radius:10px;border:none;cursor:pointer;
+    font-family:'Tajawal',sans-serif;font-weight:600;font-size:14px;
+    transition:all .2s ease;white-space:nowrap;
+  }
+  .btn-primary{background:var(--ink);color:var(--parchment)}
+  .btn-primary:hover{background:var(--ink-2);transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,27,45,.25)}
+  .btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold-deep));color:#fff}
+  .btn-gold:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(201,161,74,.4)}
+  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--border)}
+  .btn-ghost:hover{background:var(--parchment-2)}
+  .btn-danger{background:var(--coral);color:#fff}
+  .btn-danger:hover{background:var(--coral-light)}
+  .btn-sm{padding:6px 12px;font-size:12px}
+
+  /* Form elements */
+  .field{margin-bottom:14px}
+  .field-label{display:block;font-size:13px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+  .input,.select,.textarea{
+    width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+    background:#fff;font-family:'Tajawal',sans-serif;font-size:14px;color:var(--ink);
+    transition:all .2s ease;
+  }
+  .input:focus,.select:focus,.textarea:focus{
+    outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,161,74,.12);
+  }
+  .textarea{resize:vertical;min-height:70px;line-height:1.6}
+  .select{cursor:pointer;appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%239CA3AF' d='M6 8L0 0h12z'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:left 14px center;padding-left:34px;
+  }
+
+  /* Today's list (daily) */
+  .today-list{display:flex;flex-direction:column;gap:10px}
+  .today-item{
+    display:flex;align-items:flex-start;gap:12px;padding:14px 16px;
+    background:var(--parchment);border:1px solid var(--border);border-radius:12px;
+    transition:all .2s ease;
+  }
+  .today-item:hover{background:var(--parchment-2);transform:translateX(-4px)}
+  .today-item.done{opacity:.55;background:var(--parchment-2)}
+  .today-item.done .today-text{text-decoration:line-through;color:#9CA3AF}
+  .check-box{
+    width:24px;height:24px;border:2px solid var(--gold);border-radius:7px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;
+    transition:all .2s ease;background:#fff;margin-top:2px;
+  }
+  .check-box:hover{background:var(--cream)}
+  .check-box.checked{background:var(--sage);border-color:var(--sage);color:#fff;font-weight:700}
+  .today-text{flex:1;font-size:15px;font-weight:500}
+  .today-meta{font-size:12px;color:#6B7280;margin-top:4px}
+  .risk-pill{
+    display:inline-block;font-size:11px;padding:3px 10px;border-radius:99px;
+    font-weight:700;letter-spacing:.05em;
+  }
+  .risk-pill.r5{background:#FEE4E2;color:#B42318}
+  .risk-pill.r4{background:#FEE4E2;color:#B42318}
+  .risk-pill.r3{background:#FEF0C7;color:#B54708}
+  .risk-pill.r2{background:#D1FADF;color:#05603A}
+  .risk-pill.r1{background:#D1FADF;color:#05603A}
+
+  /* Table / log */
+  .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+  table{width:100%;border-collapse:collapse;background:#fff;font-size:13px}
+  thead{background:var(--ink);color:var(--parchment)}
+  th{padding:12px 14px;text-align:right;font-weight:600;font-size:12px;letter-spacing:.05em;white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+  tbody tr:hover{background:var(--parchment)}
+  tbody tr:last-child td{border-bottom:none}
+
+  .badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700}
+  .badge-held{background:#D1FADF;color:#05603A}
+  .badge-caved{background:#FEE4E2;color:#B42318}
+  .badge-partial{background:#FEF0C7;color:#B54708}
+
+  /* Master list cards */
+  .master-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .master-card{
+    background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px;
+    transition:all .25s ease;position:relative;overflow:hidden;
+  }
+  .master-card::before{
+    content:"";position:absolute;top:0;right:0;bottom:0;width:4px;background:var(--gold);
+  }
+  .master-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .master-cat{
+    display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;
+    color:var(--gold-deep);background:var(--cream);padding:3px 9px;border-radius:99px;margin-bottom:10px;
+  }
+  .master-what{font-weight:700;font-size:15px;margin-bottom:8px;color:var(--ink);line-height:1.4}
+  .master-why{font-size:13px;color:#6B7280;line-height:1.6}
+  .master-actions{display:flex;gap:6px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border)}
+  .icon-btn{
+    width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:#fff;
+    cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
+    font-size:13px;transition:all .2s ease;color:var(--ink-2);
+  }
+  .icon-btn:hover{background:var(--parchment-2)}
+  .icon-btn.danger:hover{background:#FEE4E2;border-color:var(--coral);color:var(--coral)}
+
+  /* Script cards */
+  .script-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px}
+  .script-card{
+    background:linear-gradient(135deg,#fff 0%, var(--parchment) 100%);
+    border:1px solid var(--border);border-radius:14px;padding:18px;
+    position:relative;overflow:hidden;
+  }
+  .script-badge{
+    display:inline-block;font-size:10px;font-weight:700;letter-spacing:.1em;
+    color:var(--teal);background:rgba(14,91,91,.08);padding:3px 10px;border-radius:99px;margin-bottom:10px;
+  }
+  .script-title{font-weight:700;font-size:14px;margin-bottom:8px;color:var(--ink)}
+  .script-text{
+    font-family:'Amiri',serif;font-size:15px;line-height:1.8;color:var(--ink-2);
+    padding:12px;background:#fff;border-radius:10px;border-right:3px solid var(--gold);
+  }
+  .copy-btn{
+    margin-top:10px;padding:6px 12px;font-size:12px;background:transparent;
+    border:1px solid var(--border);border-radius:8px;color:var(--ink-2);cursor:pointer;
+    font-family:'Tajawal',sans-serif;transition:all .2s ease;
+  }
+  .copy-btn:hover{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .copy-btn.copied{background:var(--sage);color:#fff;border-color:var(--sage)}
+
+  /* Weekly review */
+  .review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:20px}
+  .review-prompts{display:flex;flex-direction:column;gap:14px}
+  .review-prompt{
+    background:var(--parchment);border:1px solid var(--border);border-radius:12px;padding:16px;
+  }
+  .review-prompt-q{font-weight:700;font-size:14px;margin-bottom:8px;color:var(--ink)}
+
+  /* Strategy sheet */
+  .layer{
+    background:#fff;border:1px solid var(--border);border-radius:var(--radius);
+    padding:20px;margin-bottom:14px;position:relative;overflow:hidden;
+    border-right:5px solid var(--gold);
+  }
+  .layer.l1{border-right-color:var(--coral)}
+  .layer.l2{border-right-color:var(--gold)}
+  .layer.l3{border-right-color:var(--teal)}
+  .layer.l4{border-right-color:var(--sage)}
+  .layer-head{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+  .layer-num{
+    width:44px;height:44px;border-radius:50%;background:var(--ink);color:var(--gold);
+    display:flex;align-items:center;justify-content:center;font-family:'Reem Kufi',sans-serif;
+    font-weight:700;font-size:18px;flex-shrink:0;
+  }
+  .layer-title{font-weight:700;font-size:16px;color:var(--ink)}
+  .layer-desc{color:#4B5563;font-size:14px;line-height:1.8}
+
+  /* Filter block */
+  .filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:14px}
+  .filter-q{background:var(--parchment);border:1px solid var(--border);border-radius:12px;padding:16px}
+  .filter-q-num{
+    display:inline-block;width:28px;height:28px;border-radius:8px;
+    background:var(--gold);color:#fff;font-weight:700;text-align:center;
+    line-height:28px;font-family:'Reem Kufi',sans-serif;margin-bottom:8px;
+  }
+  .filter-q-text{font-weight:700;font-size:14px;margin-bottom:6px}
+  .filter-q-help{font-size:12px;color:#6B7280;font-style:italic}
+
+  /* Empty state */
+  .empty{text-align:center;padding:40px 20px;color:#9CA3AF}
+  .empty-icon{font-size:48px;margin-bottom:12px;opacity:.4}
+
+  /* Form inline */
+  .add-form{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));align-items:end;
+    padding:18px;background:var(--parchment);border-radius:12px;margin-bottom:18px;border:1px dashed var(--border)}
+
+  /* Toast */
+  .toast{
+    position:fixed;bottom:24px;right:24px;z-index:1000;
+    background:var(--ink);color:var(--parchment);padding:14px 22px;border-radius:12px;
+    box-shadow:var(--shadow-lg);font-weight:600;font-size:14px;
+    transform:translateY(120%);transition:transform .3s ease;
+  }
+  .toast.show{transform:translateY(0)}
+  .toast.success{background:var(--sage)}
+  .toast.error{background:var(--coral)}
+
+  /* Mobile */
+  @media(max-width:700px){
+    .tab{padding:10px 12px;font-size:12px}
+    .tab-icon{font-size:14px}
+    .tab span:not(.tab-icon){display:none}
+    .header-content{flex-direction:column;align-items:flex-start}
+    .today-date{align-self:stretch;text-align:center}
+    .master-grid,.script-grid{grid-template-columns:1fr}
+    .add-form{grid-template-columns:1fr}
+    table{font-size:12px}
+    th,td{padding:8px 10px}
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track{background:var(--parchment-2)}
+  ::-webkit-scrollbar-thumb{background:var(--gold);border-radius:4px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--gold-deep)}
+
+  /* Utility */
+  .flex{display:flex}
+  .gap-8{gap:8px}
+  .gap-12{gap:12px}
+  .mt-12{margin-top:12px}
+  .mt-16{margin-top:16px}
+  .mb-16{margin-bottom:16px}
+  .text-center{text-align:center}
+  .hidden{display:none !important}
+
+  /* Print */
+  @media print{
+    .tabs,.btn,.add-form,.icon-btn{display:none !important}
+    .panel{display:block !important}
+    .card{box-shadow:none;border:1px solid #ddd}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-content">
+      <div class="title-block">
+        <div class="eyebrow">مُتتبّع الإزالة · Remover Tracker</div>
+        <h1 class="main-title">ما لن أفعله اليوم</h1>
+        <p class="subtitle">احمِ وقتك. قُل "لا" عن وعيٍ، لا عن خجل. سجّل ما أزلته ليبقى مُزالاً.</p>
+      </div>
+      <div class="today-date" id="todayDate"></div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-tab="dashboard"><span class="tab-icon">📊</span><span>لوحة التحكم</span></button>
+    <button class="tab" data-tab="daily"><span class="tab-icon">🎯</span><span>خطة اليوم</span></button>
+    <button class="tab" data-tab="tracker"><span class="tab-icon">📋</span><span>السجل</span></button>
+    <button class="tab" data-tab="master"><span class="tab-icon">🚫</span><span>قائمة المنع</span></button>
+    <button class="tab" data-tab="scripts"><span class="tab-icon">💬</span><span>عبارات الرفض</span></button>
+    <button class="tab" data-tab="review"><span class="tab-icon">🪞</span><span>المراجعة الأسبوعية</span></button>
+    <button class="tab" data-tab="strategy"><span class="tab-icon">🗺️</span><span>الخطة والفلسفة</span></button>
+  </div>
+
+  <!-- ================= DASHBOARD ================= -->
+  <div class="panel active" id="panel-dashboard">
+
+    <!-- KPIs -->
+    <div class="dash-grid">
+      <div class="kpi c1">
+        <div class="kpi-label">مجموع الـ"لا"</div>
+        <div class="kpi-value"><span id="kpiTotal">0</span></div>
+        <div class="kpi-trend" id="kpiTotalTrend">ابدأ بتسجيل أوّل "لا"</div>
+        <div class="kpi-icon">🚫</div>
+      </div>
+      <div class="kpi c2">
+        <div class="kpi-label">"لا" هذا الأسبوع</div>
+        <div class="kpi-value"><span id="kpiWeek">0</span></div>
+        <div class="kpi-trend" id="kpiWeekTrend">آخر ٧ أيّام</div>
+        <div class="kpi-icon">📅</div>
+      </div>
+      <div class="kpi c3">
+        <div class="kpi-label">ساعات مُستردّة</div>
+        <div class="kpi-value"><span id="kpiHours">0</span><span class="kpi-unit">ساعة</span></div>
+        <div class="kpi-trend" id="kpiHoursTrend">الوقت الذي حميته</div>
+        <div class="kpi-icon">⏱️</div>
+      </div>
+      <div class="kpi c4">
+        <div class="progress-ring-wrap">
+          <div>
+            <div class="kpi-label">نسبة الالتزام</div>
+            <div class="kpi-value"><span id="kpiRate">0</span><span class="kpi-unit">%</span></div>
+            <div class="kpi-trend">"لا" تمّ الالتزام بها</div>
+          </div>
+          <div class="progress-ring">
+            <svg width="88" height="88">
+              <circle class="progress-ring-bg" cx="44" cy="44" r="38" fill="none" stroke-width="8"/>
+              <circle class="progress-ring-fg" id="ringFg" cx="44" cy="44" r="38" fill="none" stroke-width="8" stroke-dasharray="239" stroke-dashoffset="239" stroke-linecap="round"/>
+            </svg>
+            <div class="progress-ring-text" id="ringText">0%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote-banner">
+      <div class="quote-text" id="quoteText">"الفرق بين الناجحين والناجحين جدًّا أنّ الناجحين جدًّا يقولون 'لا' لكلّ شيء تقريبًا."</div>
+      <div class="quote-author">— وورن بافت</div>
+    </div>
+
+    <!-- Charts + Streak -->
+    <div class="dash-row">
+      <div class="card chart-card">
+        <div class="card-title">
+          <span class="card-title-icon" style="background:rgba(14,91,91,.1);color:var(--teal)">📈</span>
+          نشاط آخر ١٤ يومًا
+        </div>
+        <div class="card-subtitle">عدد الـ"لا" التي سجّلتها يوميًّا</div>
+        <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+      </div>
+      <div class="card streak-card">
+        <div class="streak-label">🔥 سلسلة الالتزام</div>
+        <div class="streak-num" id="streakNum">0</div>
+        <div class="streak-label" id="streakLabel">أيّام متتالية من الالتزام</div>
+        <div class="streak-flames" id="streakFlames"></div>
+      </div>
+    </div>
+
+    <!-- Category breakdown + Progress -->
+    <div class="dash-row">
+      <div class="card chart-card">
+        <div class="card-title">
+          <span class="card-title-icon" style="background:rgba(201,161,74,.15);color:var(--gold-deep)">🎯</span>
+          أكثر الفئات التي ترفضها
+        </div>
+        <div class="card-subtitle">وزّع تركيزك على ما يستحقّ الإزالة فعلاً</div>
+        <div class="chart-wrap"><canvas id="categoryChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <span class="card-title-icon" style="background:rgba(107,142,78,.15);color:var(--sage)">🎯</span>
+          تقدّم اليوم
+        </div>
+        <div class="card-subtitle">التزامك بـ"لا"ات اليوم</div>
+        <div class="progress-list" id="todayProgressList">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Today's list preview -->
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">📅 ما لن أفعله اليوم</div>
+        <button class="btn btn-gold btn-sm" onclick="switchTab('daily')">✎ تعديل القائمة</button>
+      </div>
+      <div class="today-list" id="todayPreview">
+        <!-- populated by JS -->
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= DAILY PLAN ================= -->
+  <div class="panel" id="panel-daily">
+
+    <div class="card mb-16">
+      <div class="section-header">
+        <div class="section-title">🎯 خطة اليوم — "لا"ات هذا اليوم</div>
+        <button class="btn btn-ghost btn-sm" onclick="resetDaily()">🔄 بدء يوم جديد</button>
+      </div>
+      <p class="card-subtitle">اكتب قائمتك في الليلة السابقة أو في الصباح. كلّ بند ضع له مستوى الإغراء وما ستستبدله به.</p>
+
+      <div class="add-form">
+        <div class="field" style="margin:0">
+          <label class="field-label">لن أفعل…</label>
+          <input class="input" id="inputWhat" placeholder="مثال: تفقّد الهاتف قبل الفجر">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">لأستبدله بـ…</label>
+          <input class="input" id="inputReplace" placeholder="مثال: قراءة القرآن وقراءة البحث">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">مستوى الإغراء</label>
+          <select class="select" id="inputRisk">
+            <option value="1">١ — منخفض جدًّا</option>
+            <option value="2">٢ — منخفض</option>
+            <option value="3" selected>٣ — متوسّط</option>
+            <option value="4">٤ — عالٍ</option>
+            <option value="5">٥ — عالٍ جدًّا</option>
+          </select>
+        </div>
+        <button class="btn btn-primary" onclick="addDailyItem()">+ إضافة</button>
+      </div>
+
+      <div class="today-list" id="dailyList"></div>
+    </div>
+
+    <!-- Top 3 priorities -->
+    <div class="card mb-16">
+      <div class="section-title">✅ أهمّ ٣ أولويّات اليوم (ما أحميه بالـ"لا")</div>
+      <p class="card-subtitle">كلّ "نعم" لأولويّاتك الثلاث يعني "لا" لكلّ ما عداها. اكتبها أوّلاً.</p>
+      <div style="display:grid;gap:10px;margin-top:14px">
+        <input class="input" id="prio1" placeholder="الأولويّة #١">
+        <input class="input" id="prio2" placeholder="الأولويّة #٢">
+        <input class="input" id="prio3" placeholder="الأولويّة #٣">
+      </div>
+      <button class="btn btn-primary mt-16" onclick="savePriorities()">💾 حفظ الأولويّات</button>
+    </div>
+
+    <!-- If/Then -->
+    <div class="card">
+      <div class="section-title">🛡️ خطط "إذا… فإنّي…"</div>
+      <p class="card-subtitle">التزام مُسبق مع نفسك. حين يحدث المحفّز، لا تتّخذ قرارًا — نفّذ الخطّة.</p>
+      <div id="ifThenList" style="margin-top:14px"></div>
+      <div class="add-form" style="margin-top:14px">
+        <div class="field" style="margin:0">
+          <label class="field-label">إذا…</label>
+          <input class="input" id="ifInput" placeholder="شعرتُ برغبة في تفحّص الهاتف">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">فإنّي…</label>
+          <input class="input" id="thenInput" placeholder="أضعه في الدرج وأعود للقراءة">
+        </div>
+        <button class="btn btn-primary" onclick="addIfThen()">+ إضافة</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= TRACKER LOG ================= -->
+  <div class="panel" id="panel-tracker">
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">📋 سجلّ الـ"لا"</div>
+        <button class="btn btn-gold btn-sm" onclick="toggleLogForm()">+ تسجيل "لا" جديدة</button>
+      </div>
+      <p class="card-subtitle">كلّ مرّة تقول فيها "لا"، سجّلها. هذا ما يبني العضلة ويُظهر المكاسب.</p>
+
+      <div class="add-form hidden" id="logForm" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+        <div class="field" style="margin:0">
+          <label class="field-label">التاريخ</label>
+          <input class="input" type="date" id="logDate">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">الطلب / الإغراء</label>
+          <input class="input" id="logWhat" placeholder="ماذا رفضت؟">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">من / المصدر</label>
+          <input class="input" id="logFrom" placeholder="زميل / نفسي / …">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">الفئة</label>
+          <select class="select" id="logCat">
+            <option>العمل / اجتماعات</option>
+            <option>رقمي / تركيز</option>
+            <option>اجتماعي / عائلي</option>
+            <option>صحّة / طعام</option>
+            <option>ماليّ</option>
+            <option>تعلّم / بحث</option>
+            <option>التزام شخصي</option>
+            <option>أخرى</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">ساعات محفوظة</label>
+          <input class="input" type="number" step="0.25" id="logHours" placeholder="0">
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">النتيجة</label>
+          <select class="select" id="logOutcome">
+            <option value="Held">التزمت</option>
+            <option value="Partial">جزئيًّا</option>
+            <option value="Caved">تراجعت</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0;grid-column:1 / -1">
+          <label class="field-label">الدرس / ملاحظة</label>
+          <input class="input" id="logNote" placeholder="ما الذي تعلّمته من هذه الـ'لا'؟">
+        </div>
+        <button class="btn btn-primary" onclick="addLogEntry()">💾 حفظ</button>
+        <button class="btn btn-ghost" onclick="toggleLogForm()">إلغاء</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>الطلب / الإغراء</th>
+              <th>المصدر</th>
+              <th>الفئة</th>
+              <th>ساعات</th>
+              <th>النتيجة</th>
+              <th>ملاحظة</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="logTable"></tbody>
+        </table>
+      </div>
+      <div class="empty hidden" id="logEmpty">
+        <div class="empty-icon">📭</div>
+        <div>لم تُسجّل أيّ "لا" بعد. ابدأ الآن.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MASTER LIST ================= -->
+  <div class="panel" id="panel-master">
+    <div class="card">
+      <div class="section-header">
+        <div class="section-title">🚫 قائمة المنع الدائمة</div>
+        <button class="btn btn-gold btn-sm" onclick="toggleMasterForm()">+ إضافة قاعدة</button>
+      </div>
+      <p class="card-subtitle">قرارات اتّخذتها مرّة واحدة، فلم تعد تحتاج لاتّخاذها كلّ يوم. راجعها أسبوعيًّا.</p>
+
+      <div class="add-form hidden" id="masterForm">
+        <div class="field" style="margin:0">
+          <label class="field-label">الفئة</label>
+          <select class="select" id="masterCat">
+            <option>تركيز</option><option>رقمي</option><option>عمل</option>
+            <option>تعلّم</option><option>صحّة</option><option>ماليّ</option>
+            <option>علاقات</option><option>حديث الذات</option><option>أخرى</option>
+          </select>
+        </div>
+        <div class="field" style="margin:0">
+          <label class="field-label">لن أفعل…</label>
+          <input class="input" id="masterWhat" placeholder="القاعدة">
+        </div>
+        <div class="field" style="margin:0;grid-column:1 / -1">
+          <label class="field-label">لأنّ… (السبب الحقيقيّ)</label>
+          <input class="input" id="masterWhy" placeholder="لماذا أرفض هذا دائمًا؟">
+        </div>
+        <button class="btn btn-primary" onclick="addMasterItem()">💾 حفظ القاعدة</button>
+        <button class="btn btn-ghost" onclick="toggleMasterForm()">إلغاء</button>
+      </div>
+
+      <div class="master-grid" id="masterGrid"></div>
+    </div>
+  </div>
+
+  <!-- ================= SCRIPTS ================= -->
+  <div class="panel" id="panel-scripts">
+    <div class="card">
+      <div class="section-title">💬 عبارات الرفض الجاهزة</div>
+      <p class="card-subtitle">لا تخترع الكلام تحت الضغط. اختر عبارة، عدّلها، استخدمها. الرفض الجيّد: قصير، دافئ، حاسم.</p>
+      <div class="script-grid mt-16" id="scriptsGrid"></div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="section-title">🧠 مبادئ الرفض الجيّد</div>
+      <div style="display:grid;gap:12px;margin-top:14px">
+        <div class="filter-q"><div class="filter-q-num">١</div><div class="filter-q-text">قصير.</div><div class="filter-q-help">كلّما طال الشرح، ضعف الرفض.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٢</div><div class="filter-q-text">لا تُكثر من الاعتذار.</div><div class="filter-q-help">اعتذار واحد أدب. ثلاثة دعوة للتفاوض.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٣</div><div class="filter-q-text">دافئ لا بارد.</div><div class="filter-q-help">ارفض الطلب لا الشخص.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٤</div><div class="filter-q-text">لا تفتح بابًا لا تنويه.</div><div class="filter-q-help">"ربّما لاحقًا" وعدٌ لنفسك لا لهم.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٥</div><div class="filter-q-text">الصمت جواب.</div><div class="filter-q-help">لا تدين بالرّد على كلّ سؤال.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٦</div><div class="filter-q-text">"نعم" لهذا = "لا" لشيء آخر.</div><div class="filter-q-help">اسأل دائمًا: ما الذي أرفضه فعلاً حين أوافق على هذا؟</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WEEKLY REVIEW ================= -->
+  <div class="panel" id="panel-review">
+    <div class="card mb-16">
+      <div class="section-title">📊 أرقام هذا الأسبوع</div>
+      <div class="review-grid mt-16">
+        <div class="kpi c1"><div class="kpi-label">مجموع "لا"</div><div class="kpi-value" id="wkTotal">0</div></div>
+        <div class="kpi c4"><div class="kpi-label">التزمتُ بها</div><div class="kpi-value" id="wkHeld">0</div></div>
+        <div class="kpi c1"><div class="kpi-label">تراجعتُ عنها</div><div class="kpi-value" id="wkCaved">0</div></div>
+        <div class="kpi c3"><div class="kpi-label">ساعات مُستردّة</div><div class="kpi-value" id="wkHours">0</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🪞 أسئلة المراجعة (اكتب بصدق — جملة أو اثنتان)</div>
+      <p class="card-subtitle">افعلها كلّ جمعة. ١٥ دقيقة. لا أكثر، لا أقلّ.</p>
+      <div class="review-prompts mt-16" id="reviewPrompts"></div>
+      <button class="btn btn-primary mt-16" onclick="saveReview()">💾 حفظ المراجعة</button>
+    </div>
+  </div>
+
+  <!-- ================= STRATEGY ================= -->
+  <div class="panel" id="panel-strategy">
+    <div class="card mb-16">
+      <div class="section-title">🗺️ الخطّة — كيف تُدير رفضاتك</div>
+      <p class="card-subtitle">نظام من أربع طبقات. كلّ طبقة تُزيل نوعًا مختلفًا من "نعم" قبل أن يصل إليك.</p>
+
+      <div class="layer l1 mt-16">
+        <div class="layer-head"><div class="layer-num">١</div><div class="layer-title">الطبقة الأولى — قرّر مُسبقًا (قائمة المنع)</div></div>
+        <p class="layer-desc">بعض القرارات لا يجب أن تُتّخذ في اللحظة. ضعها مرّة واحدة في قائمة المنع، فيتحوّل السؤال من "هل أفعل؟" إلى "أنا لا أفعل هذا". مثال: "لا أتفقّد الهاتف قبل التاسعة صباحًا" قاعدة. أمّا "سأحاول ألّا أفعل" فهو دعوة للفشل.</p>
+      </div>
+      <div class="layer l2">
+        <div class="layer-head"><div class="layer-num">٢</div><div class="layer-title">الطبقة الثانية — خطّط اللّيلة السابقة (خطة اليوم)</div></div>
+        <p class="layer-desc">كلّ مساء، اكتب أهمّ ٣ أولويّات للغد والـ"لا"ات التي تحميها. حين يطلع النهار، أنت تُنفّذ قرارًا لا تتّخذه. القرار تحت الضغط قرار ضعيف.</p>
+      </div>
+      <div class="layer l3">
+        <div class="layer-head"><div class="layer-num">٣</div><div class="layer-title">الطبقة الثالثة — جهّز العبارة (عبارات الرفض)</div></div>
+        <p class="layer-desc">معظم التراجع يحدث لأنّك لا تعرف ماذا تقول. احفظ ٣–٥ عبارات جاهزة. قصيرة، دافئة، حاسمة. لستَ فظًّا، أنت واضح.</p>
+      </div>
+      <div class="layer l4">
+        <div class="layer-head"><div class="layer-num">٤</div><div class="layer-title">الطبقة الرابعة — راجِع واضبِط (المراجعة الأسبوعيّة)</div></div>
+        <p class="layer-desc">كلّ أسبوع، انظر في الـ"لا"ات التي قلتَها، وفيما تراجعت عنه، وفي النمط الناشئ. أضِف قاعدة جديدة لقائمة المنع. أحِل قاعدة لم تعد تحتاجها. رفضاتك تتطوّر مع أولويّاتك.</p>
+      </div>
+    </div>
+
+    <div class="card mb-16">
+      <div class="section-title">🔍 المصفاة — ٤ أسئلة قبل كلّ "نعم"</div>
+      <p class="card-subtitle">مرّر كلّ طلب جديد على هذه الأسئلة قبل الإجابة.</p>
+      <div class="filter-grid">
+        <div class="filter-q"><div class="filter-q-num">١</div><div class="filter-q-text">هل يخدم هذا أهمّ ٣ أولويّاتي هذا الفصل؟</div><div class="filter-q-help">لا → الأصل الرفض. نعم → تابع.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٢</div><div class="filter-q-text">ما الذي سأرفضه حين أوافق على هذا؟</div><div class="filter-q-help">كلّ "نعم" مقايضة. سمِّها بوضوح.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٣</div><div class="filter-q-text">هل أقبله لو بدأ الآن في هذه الساعة؟</div><div class="filter-q-help">لو لم ترغب الآن، لن ترغب حين يحين.</div></div>
+        <div class="filter-q"><div class="filter-q-num">٤</div><div class="filter-q-text">هل هو "نعم ممتازة" أم "لا بأس"؟</div><div class="filter-q-help">كلّ ما ليس "نعم ممتازة" فهو "لا".</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">💭 اعتراضات شائعة (وأجوبة صادقة)</div>
+      <div style="display:grid;gap:12px;margin-top:14px">
+        <div class="filter-q"><div class="filter-q-text">«سيغضبون.»</div><div class="filter-q-help">معظم النّاس يتجاوزون الرفض في دقائق. أنت تتجاوز الموافقة السيّئة في أسابيع. احترم نضج الآخرين بما يكفي لتقول لهم "لا".</div></div>
+        <div class="filter-q"><div class="filter-q-text">«وإن احتجتُهم لاحقًا؟»</div><div class="filter-q-help">الـ"لا" الواضحة تبني احترامًا أعمق من الـ"نعم" المتخاذلة. النّاس يثقون بك حين تعني كلمتك شيئًا.</div></div>
+        <div class="filter-q"><div class="filter-q-text">«إنّه شيء صغير فقط.»</div><div class="filter-q-help">الأشياء الصغيرة تتراكم. عشر موافقات بعشرين دقيقة = يومٌ كامل من عمرك كلّ شهر.</div></div>
+        <div class="filter-q"><div class="filter-q-text">«أشعر بالذّنب.»</div><div class="filter-q-help">ذنب الرفض تجاه الآخرين يزول. ذنب الرفض تجاه نفسك (أولويّاتك، أهلك، صحّتك) لا يزول.</div></div>
+        <div class="filter-q"><div class="filter-q-text">«الرفض أنانيّة.»</div><div class="filter-q-help">بل الموافقة حين لا ينبغي أنانيّة — أنت تقطع وعدًا لن تُحسن الوفاء به.</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========================================
+// STATE MANAGEMENT
+// ========================================
+const STORAGE_KEY = 'removerTrackerAr';
+const defaultState = {
+  daily: [],
+  dailyDate: '',
+  priorities: ['', '', ''],
+  ifThen: [
+    {if: 'شعرتُ برغبة في تفحّص الهاتف خلال العمل العميق', then: 'أضعه في الدرج وأكتب الدافع في ورقة الملاحظات'},
+    {if: 'طلب مني أحدهم "١٥ دقيقة فقط" خلال وقت الأولويّة', then: 'أردّ: "أنا في بلوك تركيز حتّى [وقت]. نتحدّث بعدها."'},
+    {if: 'شعرتُ بالذّنب لقول "لا"', then: 'أذكّر نفسي: "نعم" لهذا = "لا" لأهمّ ثلاثة.'},
+  ],
+  log: [],
+  master: [
+    {cat:'تركيز', what:'تفقّد الهاتف أو الإشعارات في أوّل ٦٠ دقيقة بعد الاستيقاظ', why:'يحمي الفجر وأوّل بلوك عمل عميق؛ وإلّا يُفسد الصباح كلّه'},
+    {cat:'تركيز', what:'قبول أيّ اجتماع بلا أجندة واضحة وسؤال قرار', why:'أغلب الاجتماعات بلا ذلك تهدر ٤٥ دقيقة ولا تُقدّم الرسالة'},
+    {cat:'رقمي', what:'فتح منصّات التواصل خلال بلوكات العمل', why:'كلّ فتح = ٢٠–٤٠ دقيقة وتشتّت الساعة التالية'},
+    {cat:'عمل', what:'قبول أيّ التزام جديد دون النوم عليه ليلة واحدة', why:'معظم الموافقات المؤسفة تُقال تحت الضغط الاجتماعيّ'},
+    {cat:'تعلّم', what:'بدء كورس/كتاب جديد قبل إتمام الحاليّ', why:'التعلّم المتناثر = صفر عمق؛ الأفضل إتمام الواحد كاملاً'},
+    {cat:'صحّة', what:'الكربوهيدرات المكرّرة والمشروبات السكّريّة كخيار افتراضيّ', why:'ارتفاع الأنسولين يُفسد تركيز العصر والنوم'},
+    {cat:'صحّة', what:'السهر بعد [حدّدها] في التصفّح أو العمل', why:'ديْن النوم يُدمّر إنتاج الغد أكثر من أيّ شيء آخر'},
+    {cat:'ماليّ', what:'أيّ صفقة أو شراء فوق [الحدّ] في نفس يوم التفكير فيها', why:'قاعدة الـ٤٨ ساعة تقتل ٨٠٪ من القرارات المتسرّعة'},
+    {cat:'علاقات', what:'الرّد الفوريّ على الرسائل غير العاجلة خلال بلوكات التركيز', why:'يُعلّم الآخرين أنّ الوصول الفوريّ هو الأصل؛ يقضي على العمل العميق'},
+    {cat:'حديث الذات', what:'قبول الطلبات الغامضة — أسأل: النطاق، الموعد، لماذا أنا؟', why:'الطلبات الغامضة مصدر زحف النطاق وضياع الساعات'},
+  ],
+  review: {},
+  reviewTexts: {},
+};
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return {...defaultState};
+    const loaded = JSON.parse(raw);
+    return {...defaultState, ...loaded};
+  }catch(e){
+    return {...defaultState};
+  }
+}
+function saveState(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+  catch(e){ showToast('تعذّر الحفظ', 'error'); }
+}
+
+let state = loadState();
+let activityChart, categoryChart;
+
+// ========================================
+// UTILS
+// ========================================
+function showToast(msg, type='success'){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(()=> t.classList.remove('show'), 2400);
+}
+
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function formatArabicDate(d){
+  return new Intl.DateTimeFormat('ar-QA-u-ca-islamic', {weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(d)
+       + ' / ' + new Intl.DateTimeFormat('ar-QA', {weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(d);
+}
+function daysBetween(d1, d2){
+  return Math.round((new Date(d2) - new Date(d1)) / (1000*60*60*24));
+}
+
+// ========================================
+// INIT
+// ========================================
+function init(){
+  document.getElementById('todayDate').textContent = formatArabicDate(new Date());
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
+
+  // Daily reset check
+  if(state.dailyDate !== todayISO()){
+    // Keep daily items but mark new day
+    state.dailyDate = todayISO();
+    saveState();
+  }
+
+  document.getElementById('logDate').value = todayISO();
+
+  // Load priorities
+  const pr = state.priorities || ['','',''];
+  document.getElementById('prio1').value = pr[0] || '';
+  document.getElementById('prio2').value = pr[1] || '';
+  document.getElementById('prio3').value = pr[2] || '';
+
+  renderAll();
+  initCharts();
+  initReviewPrompts();
+  rotateQuote();
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-'+name));
+  if(name === 'dashboard') updateCharts();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderAll(){
+  renderDashboard();
+  renderDaily();
+  renderIfThen();
+  renderLog();
+  renderMaster();
+  renderScripts();
+  renderReviewStats();
+}
+
+// ========================================
+// DASHBOARD
+// ========================================
+function renderDashboard(){
+  const log = state.log || [];
+  const today = new Date();
+  const weekAgo = new Date(today.getTime() - 7*86400000);
+
+  // KPIs
+  document.getElementById('kpiTotal').textContent = log.length;
+  const weekEntries = log.filter(e => new Date(e.date) >= weekAgo);
+  document.getElementById('kpiWeek').textContent = weekEntries.length;
+
+  const totalHours = log.reduce((s,e) => s + (parseFloat(e.hours)||0), 0);
+  document.getElementById('kpiHours').textContent = totalHours.toFixed(1);
+
+  const withOutcome = log.filter(e => e.outcome && e.outcome !== '');
+  const heldCount = log.filter(e => e.outcome === 'Held').length;
+  const rate = withOutcome.length > 0 ? Math.round((heldCount / withOutcome.length) * 100) : 0;
+  document.getElementById('kpiRate').textContent = rate;
+
+  // Ring
+  const circ = 2 * Math.PI * 38;
+  document.getElementById('ringFg').setAttribute('stroke-dasharray', circ);
+  document.getElementById('ringFg').setAttribute('stroke-dashoffset', circ - (circ * rate / 100));
+  document.getElementById('ringText').textContent = rate + '%';
+
+  // Streak
+  const streak = computeStreak(log);
+  document.getElementById('streakNum').textContent = streak;
+  const flames = '🔥'.repeat(Math.min(streak, 7));
+  document.getElementById('streakFlames').textContent = flames || '—';
+
+  // Today preview
+  renderTodayPreview();
+  renderTodayProgress();
+
+  // Trend hints
+  document.getElementById('kpiTotalTrend').textContent = log.length === 0 ? 'ابدأ بتسجيل أوّل "لا"' : `منذ ${log.length} قرارات واعية`;
+  document.getElementById('kpiWeekTrend').textContent = weekEntries.length > 0 ? 'آخر ٧ أيّام — تقدّم ممتاز' : 'لم تُسجّل شيئًا هذا الأسبوع';
+  document.getElementById('kpiHoursTrend').textContent = totalHours > 0 ? `≈ ${(totalHours/8).toFixed(1)} يوم عمل مُستردّ` : 'الوقت الذي حميته';
+}
+
+function computeStreak(log){
+  if(log.length === 0) return 0;
+  const dates = [...new Set(log.filter(e => e.outcome === 'Held').map(e => e.date))].sort().reverse();
+  if(dates.length === 0) return 0;
+  let streak = 0;
+  let expected = todayISO();
+  for(const d of dates){
+    if(d === expected){
+      streak++;
+      const prev = new Date(expected);
+      prev.setDate(prev.getDate() - 1);
+      expected = prev.toISOString().slice(0,10);
+    } else if(streak === 0 && daysBetween(d, todayISO()) <= 1){
+      streak++;
+      const prev = new Date(d);
+      prev.setDate(prev.getDate() - 1);
+      expected = prev.toISOString().slice(0,10);
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
+function renderTodayPreview(){
+  const wrap = document.getElementById('todayPreview');
+  const items = state.daily || [];
+  if(items.length === 0){
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📝</div><div>لم تُضف "لا"ات لهذا اليوم بعد.</div><button class="btn btn-gold mt-12" onclick="switchTab('daily')">+ أضف الآن</button></div>`;
+    return;
+  }
+  wrap.innerHTML = items.slice(0, 5).map((it, i) => `
+    <div class="today-item ${it.done?'done':''}">
+      <div class="check-box ${it.done?'checked':''}" onclick="toggleDaily(${i})">${it.done?'✓':''}</div>
+      <div style="flex:1">
+        <div class="today-text">${escapeHtml(it.what || '—')}</div>
+        ${it.replace ? `<div class="today-meta">↻ بدلاً منه: ${escapeHtml(it.replace)}</div>` : ''}
+      </div>
+      <span class="risk-pill r${it.risk||3}">إغراء ${['','١','٢','٣','٤','٥'][it.risk||3]}</span>
+    </div>
+  `).join('');
+}
+
+function renderTodayProgress(){
+  const wrap = document.getElementById('todayProgressList');
+  const items = state.daily || [];
+  if(items.length === 0){
+    wrap.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-icon">🎯</div><div style="font-size:13px">أضف "لا"ات اليوم لترى تقدّمك</div></div>`;
+    return;
+  }
+  const done = items.filter(i => i.done).length;
+  const pct = Math.round((done / items.length) * 100);
+
+  const byRisk = {};
+  items.forEach(it => {
+    const key = 'مستوى ' + (['','١','٢','٣','٤','٥'][it.risk||3]);
+    if(!byRisk[key]) byRisk[key] = {done:0, total:0};
+    byRisk[key].total++;
+    if(it.done) byRisk[key].done++;
+  });
+
+  let html = `
+    <div class="progress-item">
+      <div class="progress-head"><span>الإنجاز الكلّي</span><span class="pct">${done}/${items.length} — ${pct}%</span></div>
+      <div class="progress-bar"><div class="progress-fill sage" style="width:${pct}%"></div></div>
+    </div>
+  `;
+  const colors = ['sage','gold','coral'];
+  Object.entries(byRisk).forEach(([label, v], i) => {
+    const p = Math.round((v.done / v.total) * 100);
+    html += `
+      <div class="progress-item">
+        <div class="progress-head"><span>${label}</span><span class="pct">${p}%</span></div>
+        <div class="progress-bar"><div class="progress-fill ${colors[i%colors.length]}" style="width:${p}%"></div></div>
+      </div>
+    `;
+  });
+  wrap.innerHTML = html;
+}
+
+// ========================================
+// CHARTS
+// ========================================
+function initCharts(){
+  const ctx1 = document.getElementById('activityChart').getContext('2d');
+  const ctx2 = document.getElementById('categoryChart').getContext('2d');
+
+  activityChart = new Chart(ctx1, {
+    type:'line',
+    data:{labels:[],datasets:[{
+      label:'"لا" مُسجّلة',
+      data:[],
+      borderColor:'#0E5B5B',
+      backgroundColor:'rgba(14,91,91,0.12)',
+      tension:0.4, fill:true,
+      pointBackgroundColor:'#C9A14A',
+      pointBorderColor:'#fff',
+      pointBorderWidth:2, pointRadius:5, pointHoverRadius:7,
+      borderWidth:3
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{rtl:true, titleFont:{family:'Tajawal'}, bodyFont:{family:'Tajawal'}}},
+      scales:{
+        x:{grid:{display:false}, ticks:{font:{family:'Tajawal',size:11}}},
+        y:{beginAtZero:true, ticks:{stepSize:1, font:{family:'Tajawal',size:11}}, grid:{color:'#E6DCC5'}}
+      }
+    }
+  });
+
+  categoryChart = new Chart(ctx2, {
+    type:'doughnut',
+    data:{labels:[],datasets:[{
+      data:[],
+      backgroundColor:['#C8553D','#C9A14A','#0E5B5B','#6B8E4E','#8A6A22','#1C8383','#E07A5F','#8DAD6D'],
+      borderColor:'#fff', borderWidth:3
+    }]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', rtl:true, labels:{font:{family:'Tajawal',size:12}, boxWidth:12, padding:12}},
+        tooltip:{rtl:true, titleFont:{family:'Tajawal'}, bodyFont:{family:'Tajawal'}}
+      },
+      cutout:'65%'
+    }
+  });
+  updateCharts();
+}
+
+function updateCharts(){
+  if(!activityChart) return;
+  const log = state.log || [];
+
+  // Last 14 days
+  const labels = [];
+  const data = [];
+  for(let i=13;i>=0;i--){
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0,10);
+    labels.push(d.toLocaleDateString('ar-QA',{day:'numeric',month:'short'}));
+    data.push(log.filter(e => e.date === iso).length);
+  }
+  activityChart.data.labels = labels;
+  activityChart.data.datasets[0].data = data;
+  activityChart.update();
+
+  // Categories
+  const cats = {};
+  log.forEach(e => {
+    const c = e.cat || 'أخرى';
+    cats[c] = (cats[c]||0) + 1;
+  });
+  const catEntries = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+  categoryChart.data.labels = catEntries.map(([k]) => k);
+  categoryChart.data.datasets[0].data = catEntries.map(([,v]) => v);
+  categoryChart.update();
+}
+
+// ========================================
+// DAILY
+// ========================================
+function renderDaily(){
+  const wrap = document.getElementById('dailyList');
+  const items = state.daily || [];
+  if(items.length === 0){
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div>ابدأ بكتابة أوّل "لا" لهذا اليوم أعلاه.</div></div>`;
+    return;
+  }
+  wrap.innerHTML = items.map((it, i) => `
+    <div class="today-item ${it.done?'done':''}">
+      <div class="check-box ${it.done?'checked':''}" onclick="toggleDaily(${i})">${it.done?'✓':''}</div>
+      <div style="flex:1">
+        <div class="today-text">${escapeHtml(it.what)}</div>
+        ${it.replace ? `<div class="today-meta">↻ بدلاً منه: ${escapeHtml(it.replace)}</div>` : ''}
+      </div>
+      <span class="risk-pill r${it.risk}">إغراء ${['','١','٢','٣','٤','٥'][it.risk]}</span>
+      <button class="icon-btn danger" onclick="removeDaily(${i})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function addDailyItem(){
+  const what = document.getElementById('inputWhat').value.trim();
+  const replace = document.getElementById('inputReplace').value.trim();
+  const risk = parseInt(document.getElementById('inputRisk').value);
+  if(!what){ showToast('اكتب ما لن تفعله', 'error'); return; }
+  state.daily = state.daily || [];
+  state.daily.push({what, replace, risk, done:false});
+  saveState();
+  document.getElementById('inputWhat').value = '';
+  document.getElementById('inputReplace').value = '';
+  renderDaily(); renderTodayPreview(); renderTodayProgress();
+  showToast('أُضيفت ✓');
+}
+
+function toggleDaily(i){
+  state.daily[i].done = !state.daily[i].done;
+  saveState();
+  renderDaily(); renderTodayPreview(); renderTodayProgress();
+
+  // Auto-log when marked done
+  if(state.daily[i].done){
+    const it = state.daily[i];
+    state.log = state.log || [];
+    const existing = state.log.find(e => e.date === todayISO() && e.what === it.what);
+    if(!existing){
+      state.log.push({
+        date: todayISO(), what: it.what, from:'نفسي',
+        cat:'رقمي / تركيز', hours: 0.5, outcome:'Held',
+        note:'تمّ الالتزام من قائمة اليوم'
+      });
+      saveState();
+      renderDashboard();
+      updateCharts();
+    }
+    showToast('أحسنت — التزمت ✓');
+  }
+}
+
+function removeDaily(i){
+  if(!confirm('حذف هذا البند؟')) return;
+  state.daily.splice(i,1);
+  saveState();
+  renderDaily(); renderTodayPreview(); renderTodayProgress();
+}
+
+function resetDaily(){
+  if(!confirm('بدء يوم جديد سيُفرغ قائمة اليوم. متأكّد؟')) return;
+  state.daily = [];
+  state.dailyDate = todayISO();
+  saveState();
+  renderDaily(); renderTodayPreview(); renderTodayProgress();
+  showToast('يوم جديد — بالتوفيق');
+}
+
+function savePriorities(){
+  state.priorities = [
+    document.getElementById('prio1').value,
+    document.getElementById('prio2').value,
+    document.getElementById('prio3').value,
+  ];
+  saveState();
+  showToast('حُفظت الأولويّات ✓');
+}
+
+// ========================================
+// IF/THEN
+// ========================================
+function renderIfThen(){
+  const wrap = document.getElementById('ifThenList');
+  const items = state.ifThen || [];
+  if(items.length === 0){
+    wrap.innerHTML = `<div class="empty" style="padding:20px"><div class="empty-icon">🛡️</div><div>أضف أوّل خطّة "إذا… فإنّي…"</div></div>`;
+    return;
+  }
+  wrap.innerHTML = items.map((it,i) => `
+    <div class="today-item">
+      <div style="flex:1">
+        <div><strong style="color:var(--coral)">إذا:</strong> ${escapeHtml(it.if)}</div>
+        <div style="margin-top:4px"><strong style="color:var(--sage)">فإنّي:</strong> ${escapeHtml(it.then)}</div>
+      </div>
+      <button class="icon-btn danger" onclick="removeIfThen(${i})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function addIfThen(){
+  const ifV = document.getElementById('ifInput').value.trim();
+  const thenV = document.getElementById('thenInput').value.trim();
+  if(!ifV || !thenV){ showToast('املأ الحقلين', 'error'); return; }
+  state.ifThen = state.ifThen || [];
+  state.ifThen.push({if:ifV, then:thenV});
+  saveState();
+  document.getElementById('ifInput').value = '';
+  document.getElementById('thenInput').value = '';
+  renderIfThen();
+  showToast('أُضيفت ✓');
+}
+
+function removeIfThen(i){
+  if(!confirm('حذف هذه الخطّة؟')) return;
+  state.ifThen.splice(i,1); saveState(); renderIfThen();
+}
+
+// ========================================
+// LOG
+// ========================================
+function renderLog(){
+  const log = (state.log || []).slice().sort((a,b) => b.date.localeCompare(a.date));
+  const tbody = document.getElementById('logTable');
+  const empty = document.getElementById('logEmpty');
+  if(log.length === 0){
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tbody.innerHTML = log.map((e,i) => {
+    const badge = e.outcome==='Held' ? '<span class="badge badge-held">التزمت</span>' :
+                  e.outcome==='Caved' ? '<span class="badge badge-caved">تراجعت</span>' :
+                  e.outcome==='Partial' ? '<span class="badge badge-partial">جزئيًّا</span>' : '—';
+    return `<tr>
+      <td style="white-space:nowrap">${e.date}</td>
+      <td>${escapeHtml(e.what||'')}</td>
+      <td>${escapeHtml(e.from||'')}</td>
+      <td>${escapeHtml(e.cat||'')}</td>
+      <td style="text-align:center">${e.hours||0}</td>
+      <td>${badge}</td>
+      <td style="color:#6B7280;font-size:12px">${escapeHtml(e.note||'')}</td>
+      <td><button class="icon-btn danger" onclick="removeLog(${state.log.indexOf(e)})">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleLogForm(){ document.getElementById('logForm').classList.toggle('hidden'); }
+
+function addLogEntry(){
+  const entry = {
+    date: document.getElementById('logDate').value || todayISO(),
+    what: document.getElementById('logWhat').value.trim(),
+    from: document.getElementById('logFrom').value.trim(),
+    cat:  document.getElementById('logCat').value,
+    hours: parseFloat(document.getElementById('logHours').value) || 0,
+    outcome: document.getElementById('logOutcome').value,
+    note: document.getElementById('logNote').value.trim(),
+  };
+  if(!entry.what){ showToast('اكتب ما رفضتَه', 'error'); return; }
+  state.log = state.log || [];
+  state.log.push(entry);
+  saveState();
+  ['logWhat','logFrom','logHours','logNote'].forEach(id => document.getElementById(id).value = '');
+  renderLog(); renderDashboard(); updateCharts(); renderReviewStats();
+  showToast('سُجّلت الـ"لا" ✓');
+}
+
+function removeLog(i){
+  if(!confirm('حذف هذا السجلّ؟')) return;
+  state.log.splice(i,1); saveState();
+  renderLog(); renderDashboard(); updateCharts(); renderReviewStats();
+}
+
+// ========================================
+// MASTER LIST
+// ========================================
+function renderMaster(){
+  const grid = document.getElementById('masterGrid');
+  const items = state.master || [];
+  if(items.length === 0){
+    grid.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="empty-icon">🚫</div><div>لم تُضف قواعد دائمة بعد.</div></div>`;
+    return;
+  }
+  grid.innerHTML = items.map((it, i) => `
+    <div class="master-card">
+      <div class="master-cat">${escapeHtml(it.cat)}</div>
+      <div class="master-what">${escapeHtml(it.what)}</div>
+      <div class="master-why">${escapeHtml(it.why||'')}</div>
+      <div class="master-actions">
+        <button class="icon-btn danger" onclick="removeMaster(${i})" title="حذف">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleMasterForm(){ document.getElementById('masterForm').classList.toggle('hidden'); }
+
+function addMasterItem(){
+  const cat = document.getElementById('masterCat').value;
+  const what = document.getElementById('masterWhat').value.trim();
+  const why = document.getElementById('masterWhy').value.trim();
+  if(!what){ showToast('اكتب القاعدة', 'error'); return; }
+  state.master = state.master || [];
+  state.master.unshift({cat, what, why});
+  saveState();
+  document.getElementById('masterWhat').value = '';
+  document.getElementById('masterWhy').value = '';
+  renderMaster();
+  showToast('أُضيفت القاعدة ✓');
+}
+
+function removeMaster(i){
+  if(!confirm('حذف هذه القاعدة؟')) return;
+  state.master.splice(i,1); saveState(); renderMaster();
+}
+
+// ========================================
+// SCRIPTS
+// ========================================
+const SCRIPTS = [
+  {cat:'دعوة اجتماع', style:'رفض لبِق', text:'شكرًا لتفكيرك بي. لن أتمكّن من الحضور — هذا الفصل أحمي وقت تركيزي للرسالة. لو عندك نقطة تحتاج رأيي فيها كتابةً، أجيبك بالبريد.'},
+  {cat:'طلب "سريع"', style:'نعم مؤجّلة (لا ناعمة)', text:'لا أستطيع أخذه هذا الأسبوع. إذا ما زال مناسبًا بعد [تاريخ]، أرسل لي سطرًا مختصرًا وأنظر في إمكانيّة دمجه.'},
+  {cat:'مهمّة إضافيّة في العمل', style:'إطار المقايضة', text:'سأسعد بأخذها — أيّ من أولويّاتي الحاليّة تُحبّ أن أوقِفَها حتّى لا تتأخّر هذه؟'},
+  {cat:'ضغط اجتماعيّ', style:'حدّ واضح', text:'فكّرتُ فيها، وإجابتي لا. أقدّر لك السؤال.'},
+  {cat:'حديث الذات', style:'رفض داخليّ', text:'ليس الآن. هذا ليس ضمن أهمّ ثلاثة. إن بقي مهمًّا غدًا، سأُجدول له.'},
+  {cat:'طلب عائليّ / اجتماعيّ', style:'رفض دافئ', text:'أعتذر عن هذا، لا أستطيع هذه المرّة. جزاكم الله خيرًا على الدعوة.'},
+  {cat:'مُوزّع / بائع', style:'إغلاق حازم', text:'هذا ليس أولويّة لديّ. أرجو إزالتي من المتابعة. شكرًا لك.'},
+  {cat:'زحف نطاق في مشروع', style:'إعادة نطاق', text:'هذا خارج ما اتّفقنا عليه. إمّا أن أُضيفه وأُأخّر الموعد، أو أُبقي النطاق كما هو — أيّهما تُفضّل؟'},
+  {cat:'دعوة لحدث منخفض القيمة', style:'قصير ودافئ', text:'لن أتمكّن، لكن شكرًا لإدراجي. أتمنّى لكم التوفيق.'},
+  {cat:'التزام متكرّر تريد الخروج منه', style:'خروج لائق', text:'استفدتُ كثيرًا من وجودي هنا، لكن أحتاج للتراجع للتركيز على [س]. سأُسلّم بشكل مرتّب بحلول [تاريخ].'},
+  {cat:'من يعرض "مرّة أخيرة"', style:'رفض مُسبق', text:'وضعتُ لنفسي قاعدة ألّا أقبل [س] جديدة هذا الشهر. أودّ احترامها.'},
+  {cat:'طلب من شخص أقدم', style:'معارضة محترمة', text:'أريد أن أُعطي هذا حقّه. نظرًا لعبئي الحاليّ في [الأولويّة]، هل يمكننا مناقشة كيفيّة ترتيبها؟'},
+];
+
+function renderScripts(){
+  document.getElementById('scriptsGrid').innerHTML = SCRIPTS.map((s, i) => `
+    <div class="script-card">
+      <div class="script-badge">${escapeHtml(s.cat)}</div>
+      <div class="script-title">${escapeHtml(s.style)}</div>
+      <div class="script-text">${escapeHtml(s.text)}</div>
+      <button class="copy-btn" onclick="copyScript(${i}, this)">📋 نسخ</button>
+    </div>
+  `).join('');
+}
+
+function copyScript(i, btn){
+  navigator.clipboard.writeText(SCRIPTS[i].text).then(() => {
+    btn.textContent = '✓ نُسخت';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = '📋 نسخ'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ========================================
+// WEEKLY REVIEW
+// ========================================
+const REVIEW_QUESTIONS = [
+  'أيّ "لا" هذا الأسبوع حمت أهمّ ما عندك؟',
+  'أيّ "نعم" هذا الأسبوع كلّفتك الأكثر؟',
+  'ما النّمط الذي يستمرّ في جرّك بعيدًا؟',
+  'لمن أو لأيّ شيء تحتاج أن تقول "لا" بشكل أحزم الأسبوع القادم؟',
+  'قاعدة واحدة لإضافتها لقائمة المنع:',
+  'قاعدة واحدة للإحالة (صارت تلقائيّة):',
+  'لو كان الأسبوع القادم فيه ٣ أولويّات فقط، ما هي؟',
+];
+
+function initReviewPrompts(){
+  const wrap = document.getElementById('reviewPrompts');
+  wrap.innerHTML = REVIEW_QUESTIONS.map((q, i) => `
+    <div class="review-prompt">
+      <div class="review-prompt-q">${i+1}. ${q}</div>
+      <textarea class="textarea" id="rvq${i}" placeholder="اكتب بصدق…">${escapeHtml((state.reviewTexts && state.reviewTexts['q'+i]) || '')}</textarea>
+    </div>
+  `).join('');
+}
+
+function saveReview(){
+  state.reviewTexts = state.reviewTexts || {};
+  REVIEW_QUESTIONS.forEach((_, i) => {
+    state.reviewTexts['q'+i] = document.getElementById('rvq'+i).value;
+  });
+  saveState();
+  showToast('حُفظت المراجعة ✓');
+}
+
+function renderReviewStats(){
+  const log = state.log || [];
+  const today = new Date();
+  const weekAgo = new Date(today.getTime() - 7*86400000);
+  const wk = log.filter(e => new Date(e.date) >= weekAgo);
+
+  document.getElementById('wkTotal').textContent = wk.length;
+  document.getElementById('wkHeld').textContent = wk.filter(e => e.outcome==='Held').length;
+  document.getElementById('wkCaved').textContent = wk.filter(e => e.outcome==='Caved').length;
+  document.getElementById('wkHours').textContent = wk.reduce((s,e) => s + (parseFloat(e.hours)||0), 0).toFixed(1);
+}
+
+// ========================================
+// QUOTES
+// ========================================
+const QUOTES = [
+  {t:'"الفرق بين الناجحين والناجحين جدًّا أنّ الناجحين جدًّا يقولون "لا" لكلّ شيء تقريبًا."', a:'وورن بافت'},
+  {t:'"من حسن إسلام المرء تركه ما لا يعنيه."', a:'حديث شريف'},
+  {t:'"ما ليس نعم ممتازة، فهو لا."', a:'ديريك سيفرز'},
+  {t:'"الوقت الذي تستمتع بإضاعته ليس وقتًا ضائعًا."', a:'برتراند راسل — مع الانتباه إلى الفرق بين الإضاعة الواعية والتسويف'},
+  {t:'"لا يُلدغ المؤمن من جُحر واحد مرّتين."', a:'حديث شريف'},
+  {t:'"القرار الأصعب هو التخلّي عن شيء جيّد من أجل شيء أفضل."', a:'جيم كولينز'},
+  {t:'"من استوى يوماه فهو مغبون."', a:'الإمام عليّ بن أبي طالب'},
+];
+
+function rotateQuote(){
+  const q = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+  document.getElementById('quoteText').textContent = q.t;
+  document.querySelector('.quote-author').textContent = '— ' + q.a;
+}
+
+// ========================================
+// HELPERS
+// ========================================
+function escapeHtml(s){
+  return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Boot
+init();
+</script>
+</body>
+</html>

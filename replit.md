@@ -1,8 +1,8 @@
-# Workspace
+# متتبع الإزالة — Remover Tracker
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Full-stack Arabic productivity app for tracking commitments to say "No". Users record, log, and track things they commit NOT to do — protecting their time, focus, and energy.
 
 ## Stack
 
@@ -10,11 +10,34 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Node.js version**: 24
 - **Package manager**: pnpm
 - **TypeScript version**: 5.9
-- **API framework**: Express 5
+- **Frontend**: React + Vite (`artifacts/remover-tracker/`) at path `/`
+- **API framework**: Express 5 (`artifacts/api-server/`)
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
+- **Charts**: Recharts
+- **Animations**: Framer Motion
+- **Typography**: Arabic fonts (Amiri, Tajawal, Reem Kufi)
+
+## Database Schema
+
+- `log_entries` — recorded "No" entries (refusals with outcome tracking)
+- `daily_items` — daily plan items (today's "No" list)
+- `master_rules` — permanent ban rules (never-do items)
+- `priorities` — today's top 3 priorities (one record per date)
+- `if_then_plans` — if/then conditional plans for trigger management
+
+## API Routes
+
+- `GET/POST/PATCH/DELETE /api/log-entries` — CRUD for log entries
+- `GET/POST/PATCH/DELETE /api/daily-items` — daily plan items
+- `GET/POST/DELETE /api/master-rules` — permanent rules
+- `GET/PUT /api/priorities` — today's priorities (upsert by date)
+- `GET/POST/DELETE /api/if-then` — conditional plans
+- `GET /api/dashboard/stats` — KPI summary (totalNos, weekNos, hoursRecovered, commitmentRate, streak)
+- `GET /api/dashboard/activity` — last 14 days daily counts
+- `GET /api/dashboard/by-category` — category breakdown
 
 ## Key Commands
 
@@ -24,4 +47,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
-See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+## Important Notes
+
+- After codegen, manually fix `lib/api-zod/src/index.ts` to only `export * from "./generated/api";` (not types)
+- Date fields from DB are serialized via `serializeRow()` helper in `src/lib/serialize.ts` before Zod validation
+- All UI is Arabic RTL — `dir="rtl"` set on HTML root

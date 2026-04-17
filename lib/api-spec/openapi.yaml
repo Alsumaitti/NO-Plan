@@ -3,13 +3,26 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: API specification for متتبع الإزالة (Remover Tracker)
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: log-entries
+    description: Log of "No" entries (refusals recorded)
+  - name: daily-items
+    description: Daily plan items (things not to do today)
+  - name: master-rules
+    description: Permanent ban rules
+  - name: priorities
+    description: Today's top 3 priorities
+  - name: if-then
+    description: If/Then plans for triggers
+  - name: dashboard
+    description: Dashboard summaries and stats
+
 paths:
   /healthz:
     get:
@@ -24,6 +37,334 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /log-entries:
+    get:
+      operationId: getLogEntries
+      tags: [log-entries]
+      summary: List all log entries
+      responses:
+        "200":
+          description: List of log entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LogEntry"
+    post:
+      operationId: createLogEntry
+      tags: [log-entries]
+      summary: Create a new log entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLogEntryBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogEntry"
+        "400":
+          description: Bad request
+
+  /log-entries/{id}:
+    patch:
+      operationId: updateLogEntry
+      tags: [log-entries]
+      summary: Update a log entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLogEntryBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LogEntry"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteLogEntry
+      tags: [log-entries]
+      summary: Delete a log entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /daily-items:
+    get:
+      operationId: getDailyItems
+      tags: [daily-items]
+      summary: Get daily items for today
+      responses:
+        "200":
+          description: List of daily items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DailyItem"
+    post:
+      operationId: createDailyItem
+      tags: [daily-items]
+      summary: Create a daily item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDailyItemBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyItem"
+        "400":
+          description: Bad request
+
+  /daily-items/{id}:
+    patch:
+      operationId: updateDailyItem
+      tags: [daily-items]
+      summary: Update a daily item (e.g. toggle done)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateDailyItemBody"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyItem"
+        "404":
+          description: Not found
+    delete:
+      operationId: deleteDailyItem
+      tags: [daily-items]
+      summary: Delete a daily item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /master-rules:
+    get:
+      operationId: getMasterRules
+      tags: [master-rules]
+      summary: Get permanent ban rules
+      responses:
+        "200":
+          description: List of rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MasterRule"
+    post:
+      operationId: createMasterRule
+      tags: [master-rules]
+      summary: Create a master rule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMasterRuleBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MasterRule"
+        "400":
+          description: Bad request
+
+  /master-rules/{id}:
+    delete:
+      operationId: deleteMasterRule
+      tags: [master-rules]
+      summary: Delete a master rule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /priorities:
+    get:
+      operationId: getPriorities
+      tags: [priorities]
+      summary: Get today's priorities
+      responses:
+        "200":
+          description: Today's priorities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Priorities"
+    put:
+      operationId: savePriorities
+      tags: [priorities]
+      summary: Save today's priorities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Priorities"
+      responses:
+        "200":
+          description: Saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Priorities"
+
+  /if-then:
+    get:
+      operationId: getIfThenPlans
+      tags: [if-then]
+      summary: Get all if/then plans
+      responses:
+        "200":
+          description: List of if/then plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/IfThenPlan"
+    post:
+      operationId: createIfThenPlan
+      tags: [if-then]
+      summary: Create an if/then plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateIfThenPlanBody"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IfThenPlan"
+        "400":
+          description: Bad request
+
+  /if-then/{id}:
+    delete:
+      operationId: deleteIfThenPlan
+      tags: [if-then]
+      summary: Delete an if/then plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard KPI stats
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/activity:
+    get:
+      operationId: getDashboardActivity
+      tags: [dashboard]
+      summary: Get last 14 days activity (daily counts)
+      responses:
+        "200":
+          description: Activity data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DayActivity"
+
+  /dashboard/by-category:
+    get:
+      operationId: getDashboardByCategory
+      tags: [dashboard]
+      summary: Get log entries grouped by category
+      responses:
+        "200":
+          description: Category breakdown
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryCount"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +375,252 @@ components:
       required:
         - status
 
+    LogEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        what:
+          type: string
+        source:
+          type: string
+        category:
+          type: string
+        hoursRecovered:
+          type: ["number", "null"]
+        outcome:
+          type: string
+          enum: [Held, Partial, Caved]
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - what
+        - source
+        - category
+        - outcome
+        - createdAt
+
+    CreateLogEntryBody:
+      type: object
+      properties:
+        date:
+          type: string
+        what:
+          type: string
+        source:
+          type: string
+        category:
+          type: string
+        hoursRecovered:
+          type: ["number", "null"]
+        outcome:
+          type: string
+          enum: [Held, Partial, Caved]
+        note:
+          type: ["string", "null"]
+      required:
+        - date
+        - what
+        - source
+        - category
+        - outcome
+
+    UpdateLogEntryBody:
+      type: object
+      properties:
+        date:
+          type: string
+        what:
+          type: string
+        source:
+          type: string
+        category:
+          type: string
+        hoursRecovered:
+          type: ["number", "null"]
+        outcome:
+          type: string
+          enum: [Held, Partial, Caved]
+        note:
+          type: ["string", "null"]
+
+    DailyItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        what:
+          type: string
+        replacement:
+          type: ["string", "null"]
+        riskLevel:
+          type: integer
+        done:
+          type: boolean
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - what
+        - riskLevel
+        - done
+        - createdAt
+
+    CreateDailyItemBody:
+      type: object
+      properties:
+        date:
+          type: string
+        what:
+          type: string
+        replacement:
+          type: ["string", "null"]
+        riskLevel:
+          type: integer
+      required:
+        - date
+        - what
+        - riskLevel
+
+    UpdateDailyItemBody:
+      type: object
+      properties:
+        done:
+          type: boolean
+        what:
+          type: string
+        replacement:
+          type: ["string", "null"]
+        riskLevel:
+          type: integer
+
+    MasterRule:
+      type: object
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+        what:
+          type: string
+        why:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+      required:
+        - id
+        - category
+        - what
+        - createdAt
+
+    CreateMasterRuleBody:
+      type: object
+      properties:
+        category:
+          type: string
+        what:
+          type: string
+        why:
+          type: ["string", "null"]
+      required:
+        - category
+        - what
+
+    Priorities:
+      type: object
+      properties:
+        date:
+          type: string
+        priority1:
+          type: ["string", "null"]
+        priority2:
+          type: ["string", "null"]
+        priority3:
+          type: ["string", "null"]
+      required:
+        - date
+
+    IfThenPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        date:
+          type: string
+        ifCondition:
+          type: string
+        thenAction:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - date
+        - ifCondition
+        - thenAction
+        - createdAt
+
+    CreateIfThenPlanBody:
+      type: object
+      properties:
+        date:
+          type: string
+        ifCondition:
+          type: string
+        thenAction:
+          type: string
+      required:
+        - date
+        - ifCondition
+        - thenAction
+
+    DashboardStats:
+      type: object
+      properties:
+        totalNos:
+          type: integer
+        weekNos:
+          type: integer
+        hoursRecovered:
+          type: number
+        commitmentRate:
+          type: number
+        streak:
+          type: integer
+      required:
+        - totalNos
+        - weekNos
+        - hoursRecovered
+        - commitmentRate
+        - streak
+
+    DayActivity:
+      type: object
+      properties:
+        date:
+          type: string
+        count:
+          type: integer
+      required:
+        - date
+        - count
+
+    CategoryCount:
+      type: object
+      properties:
+        category:
+          type: string
+        count:
+          type: integer
+      required:
+        - category
+        - count
