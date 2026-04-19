@@ -7,40 +7,45 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useApp } from "@/lib/AppContext";
+import { useAuthFetch } from "@/lib/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 
+type Outcome = "Held" | "Partial" | "Caved";
+
 interface LogEntry {
   id: number;
   date: string;
-  subject: string;
+  what: string;
   source?: string;
   category?: string;
-  outcome: "held" | "partial" | "caved";
-  hoursRecovered?: number;
-  notes?: string;
+  outcome: Outcome;
+  hoursRecovered?: number | null;
+  note?: string | null;
 }
 
 const DEFAULT_CATEGORIES_AR = ["العمل / اجتماعات", "رقمي / تركيز", "اجتماعي / عائلي", "صحّة / طعام", "ماليّ", "تعلّم / بحث", "التزام شخصي", "أخرى"];
 const DEFAULT_CATEGORIES_EN = ["Work / Meetings", "Digital / Focus", "Social / Family", "Health / Food", "Financial", "Learning / Research", "Personal Commitment", "Other"];
 
 const OUTCOME_COLORS: Record<string, string> = {
-  held: "bg-green-100 text-green-800 border-green-200",
-  partial: "bg-amber-100 text-amber-800 border-amber-200",
-  caved: "bg-red-100 text-red-800 border-red-200",
+  Held: "bg-green-100 text-green-800 border-green-200",
+  Partial: "bg-amber-100 text-amber-800 border-amber-200",
+  Caved: "bg-red-100 text-red-800 border-red-200",
 };
 
 function outcomeLabel(o: string, T: (k: string) => string) {
-  if (o === "held") return T("held");
-  if (o === "partial") return T("partial");
-  if (o === "caved") return T("caved");
+  const lo = o?.toLowerCase();
+  if (lo === "held") return T("held");
+  if (lo === "partial") return T("partial");
+  if (lo === "caved") return T("caved");
   return o;
 }
 
 export default function Tracker() {
   const { T, lang } = useApp();
   const qc = useQueryClient();
+  const authFetch = useAuthFetch();
   const locale = lang === "ar" ? arSA : enUS;
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -53,7 +58,7 @@ export default function Tracker() {
   const [editingEntry, setEditingEntry] = useState<Partial<LogEntry> | null>(null);
   const [deleteIds, setDeleteIds] = useState<number[]>([]);
 
-  const { data: settings } = useQuery<{ customCategories?: string[] }>({ queryKey: ["settings"], queryFn: () => fetch("/api/settings").then(r => r.json()), staleTime: 120000 });
+  const { data: settings } = useQuery<{ customCategories?: string[] }>({ queryKey: ["settings"], queryFn: () => authFetch("/api/settings").then(r => r.json()), staleTime: 120000 });
   const categories = (settings?.customCategories?.length ? settings.customCategories : (lang === "en" ? DEFAULT_CATEGORIES_EN : DEFAULT_CATEGORIES_AR));
 
   const queryKey = ["log-entries", filterFrom, filterTo, filterCat, filterOutcome];
@@ -65,7 +70,7 @@ export default function Tracker() {
       if (filterTo) params.set("to", filterTo);
       if (filterCat) params.set("category", filterCat);
       if (filterOutcome) params.set("outcome", filterOutcome);
-      return fetch(`/api/log-entries?${params}`).then(r => r.json());
+      return authFetch(`/api/log-entries?${params}`).then(r => r.json());
     },
     staleTime: 30000,
   });
@@ -73,14 +78,23 @@ export default function Tracker() {
   const filtered = useMemo(() => {
     if (!searchTerm.trim()) return entries;
     const q = searchTerm.toLowerCase();
-    return entries.filter(e => e.subject?.toLowerCase().includes(q) || e.source?.toLowerCase().includes(q) || e.notes?.toLowerCase().includes(q));
+    return entries.filter(e => e.what?.toLowerCase().includes(q) || e.source?.toLowerCase().includes(q) || e.note?.toLowerCase().includes(q));
   }, [entries, searchTerm]);
 
   const saveMutation = useMutation({
     mutationFn: async (entry: Partial<LogEntry>) => {
       const method = entry.id ? "PUT" : "POST";
       const url = entry.id ? `/api/log-entries/${entry.id}` : "/api/log-entries";
-      const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+      // ensure required fields for create
+      const body: Record<string, unknown> = { ...entry };
+      if (!entry.id) {
+        body.date = entry.date || new Date().toISOString().split("T")[0];
+        body.source = entry.source || (lang === "ar" ? "يدوي" : "Manual");
+        body.category = entry.category || (lang === "ar" ? "أخرى" : "Other");
+        body.outcome = entry.outcome || "Held";
+      }
+      const r = await authFetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(`${r.status}`);
       return r.json();
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["log-entries"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setShowForm(false); setEditingEntry(null); },
@@ -88,7 +102,7 @@ export default function Tracker() {
 
   const deleteMutation = useMutation({
     mutationFn: async (ids: number[]) => {
-      await fetch("/api/log-entries", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+      await authFetch("/api/log-entries", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["log-entries"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setDeleteIds([]); },
   });
@@ -99,14 +113,22 @@ export default function Tracker() {
     setFilterCat(""); setFilterOutcome(""); setFilterFrom(""); setFilterTo(""); setSearchTerm("");
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     const params = new URLSearchParams();
     if (filterFrom) params.set("from", filterFrom);
     if (filterTo) params.set("to", filterTo);
     if (filterCat) params.set("category", filterCat);
     if (filterOutcome) params.set("outcome", filterOutcome);
     params.set("lang", exportLang);
-    window.open(`/api/export?${params}`, "_blank");
+    const r = await authFetch(`/api/export?${params}`);
+    if (!r.ok) return;
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `no-log-${new Date().toISOString().split("T")[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const form = editingEntry ?? {};
@@ -153,9 +175,9 @@ export default function Tracker() {
               className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
             >
               <option value="">{T("allOutcomes")}</option>
-              <option value="held">{T("held")}</option>
-              <option value="partial">{T("partial")}</option>
-              <option value="caved">{T("caved")}</option>
+              <option value="Held">{T("held")}</option>
+              <option value="Partial">{T("partial")}</option>
+              <option value="Caved">{T("caved")}</option>
             </select>
           </div>
 
@@ -241,7 +263,7 @@ export default function Tracker() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <span className="font-medium text-ink text-sm truncate">{entry.subject}</span>
+                        <span className="font-medium text-ink text-sm truncate">{entry.what}</span>
                         <Badge className={`text-xs border ${OUTCOME_COLORS[entry.outcome] ?? ""}`} variant="outline">
                           {outcomeLabel(entry.outcome, T)}
                         </Badge>
@@ -253,7 +275,7 @@ export default function Tracker() {
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                         <span>{format(parseISO(entry.date), "PPP", { locale })}</span>
                         {entry.source && <span>• {entry.source}</span>}
-                        {entry.notes && <span className="truncate max-w-xs">• {entry.notes}</span>}
+                        {entry.note && <span className="truncate max-w-xs">• {entry.note}</span>}
                       </div>
                     </div>
                   </div>
@@ -300,7 +322,7 @@ function EntryForm({
   const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState<Partial<LogEntry>>({
     date: today,
-    outcome: "held",
+    outcome: "Held",
     ...initial,
   });
 
@@ -310,7 +332,7 @@ function EntryForm({
     <div className="space-y-3">
       <div>
         <label className="text-xs text-muted-foreground block mb-1">{T("whatSaidNo")} *</label>
-        <Input value={form.subject ?? ""} onChange={e => set("subject", e.target.value)} placeholder={lang === "ar" ? "مثال: اجتماع غير ضروري" : "e.g. Unnecessary meeting"} />
+        <Input value={form.what ?? ""} onChange={e => set("what", e.target.value)} placeholder={lang === "ar" ? "مثال: اجتماع غير ضروري" : "e.g. Unnecessary meeting"} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -319,10 +341,10 @@ function EntryForm({
         </div>
         <div>
           <label className="text-xs text-muted-foreground block mb-1">{T("outcome")}</label>
-          <select value={form.outcome ?? "held"} onChange={e => set("outcome", e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground">
-            <option value="held">{T("held")}</option>
-            <option value="partial">{T("partial")}</option>
-            <option value="caved">{T("caved")}</option>
+          <select value={form.outcome ?? "Held"} onChange={e => set("outcome", e.target.value as Outcome)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground">
+            <option value="Held">{T("held")}</option>
+            <option value="Partial">{T("partial")}</option>
+            <option value="Caved">{T("caved")}</option>
           </select>
         </div>
       </div>
@@ -346,8 +368,8 @@ function EntryForm({
       <div>
         <label className="text-xs text-muted-foreground block mb-1">{T("notes")}</label>
         <textarea
-          value={form.notes ?? ""}
-          onChange={e => set("notes", e.target.value)}
+          value={form.note ?? ""}
+          onChange={e => set("note", e.target.value)}
           className="w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground resize-none"
           placeholder={lang === "ar" ? "ملاحظات إضافية..." : "Additional notes..."}
         />
@@ -363,7 +385,7 @@ function EntryForm({
         <Button
           className="bg-gold hover:bg-gold/90 text-ink font-bold"
           onClick={() => onSave(form)}
-          disabled={!form.subject?.trim() || isSaving}
+          disabled={!form.what?.trim() || isSaving}
         >
           {T("save")}
         </Button>

@@ -183,7 +183,14 @@ export default function DailyPlan() {
 
   // ---- Mutations ----
   const addItem = useMutation({
-    mutationFn: (data: { what: string; replacement?: string; riskLevel: number }) =>
+    mutationFn: (data: {
+      what: string;
+      replacement?: string;
+      riskLevel: number;
+      source?: string;
+      category?: string;
+      hoursRecovered?: number;
+    }) =>
       authFetch("/api/daily-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -192,7 +199,7 @@ export default function DailyPlan() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["daily-items", today] });
       setShowAddForm(false);
-      setNewItem({ what: "", replacement: "", riskLevel: 3 });
+      setNewItem({ what: "", replacement: "", riskLevel: 3, source: "", category: "", hoursRecovered: "" });
     },
   });
 
@@ -276,9 +283,17 @@ export default function DailyPlan() {
 
   // ---- Local state ----
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newItem, setNewItem] = useState<{ what: string; replacement: string; riskLevel: number }>({
-    what: "", replacement: "", riskLevel: 3,
+  const [newItem, setNewItem] = useState<{
+    what: string;
+    replacement: string;
+    riskLevel: number;
+    source: string;
+    category: string;
+    hoursRecovered: string;
+  }>({
+    what: "", replacement: "", riskLevel: 3, source: "", category: "", hoursRecovered: "",
   });
+  const [showMoreFields, setShowMoreFields] = useState(false);
   const [priorities, setPriorities] = useState<string[]>(["", "", ""]);
   const [newTrigger, setNewTrigger] = useState("");
   const [newResponse, setNewResponse] = useState("");
@@ -312,10 +327,14 @@ export default function DailyPlan() {
 
   const handleAddItem = () => {
     if (!newItem.what.trim()) return;
+    const hours = newItem.hoursRecovered ? parseFloat(newItem.hoursRecovered) : undefined;
     addItem.mutate({
       what: newItem.what.trim(),
       replacement: newItem.replacement.trim() || undefined,
       riskLevel: newItem.riskLevel,
+      source: newItem.source.trim() || undefined,
+      category: newItem.category.trim() || undefined,
+      hoursRecovered: hours && !isNaN(hours) ? hours : undefined,
     });
   };
 
@@ -360,11 +379,25 @@ export default function DailyPlan() {
           )}
           <Button
             onClick={() => setShowAddForm((v) => !v)}
-            className="h-10 gap-2 bg-foreground text-background hover:bg-foreground/90"
+            className="h-11 min-w-[44px] gap-2 bg-foreground text-background hover:bg-foreground/90"
           >
             <Plus className="h-4 w-4" />
             {T("addItem", isRTL ? "إضافة بند" : "Add item")}
           </Button>
+          {items.length > 0 && (
+            <Button
+              onClick={() => archivePast.mutate(today)}
+              disabled={archivePast.isPending}
+              variant="outline"
+              className="h-11 min-w-[44px] gap-2 border-gold/40 text-gold-deep hover:bg-gold/10"
+              title={isRTL ? "رحِّل خطة اليوم إلى السجل الآن" : "Archive today's plan to log now"}
+            >
+              {archivePast.isPending
+                ? <Loader2 className="h-4 w-4 animate-spin" />
+                : <ArchiveIcon className="h-4 w-4" />}
+              <span className="hidden sm:inline">{isRTL ? "رحِّل الآن" : "Archive now"}</span>
+            </Button>
+          )}
         </div>
       </header>
 
@@ -472,6 +505,77 @@ export default function DailyPlan() {
                     labels={riskLabels}
                   />
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowMoreFields((v) => !v)}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
+                >
+                  {showMoreFields
+                    ? (isRTL ? "− إخفاء حقول السجل" : "− Hide log fields")
+                    : (isRTL ? "+ إضافة حقول السجل (الفئة، المصدر، الساعات)" : "+ Add log fields (category, source, hours)")}
+                </button>
+
+                <AnimatePresence>
+                  {showMoreFields && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-3 overflow-hidden"
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label htmlFor="category" className="text-xs font-medium text-foreground/70 mb-1.5 block">
+                            {isRTL ? "الفئة" : "Category"}
+                          </label>
+                          <Input
+                            id="category"
+                            list="category-suggestions"
+                            value={newItem.category}
+                            onChange={(e) => setNewItem((i) => ({ ...i, category: e.target.value }))}
+                            placeholder={isRTL ? "مثلا: رقمي / تركيز" : "e.g. Digital / Focus"}
+                            className="h-10"
+                          />
+                          <datalist id="category-suggestions">
+                            {(isRTL
+                              ? ["العمل / اجتماعات", "رقمي / تركيز", "اجتماعي / عائلي", "صحّة / طعام", "ماليّ", "تعلّم / بحث", "التزام شخصي", "أخرى"]
+                              : ["Work / Meetings", "Digital / Focus", "Social / Family", "Health / Food", "Financial", "Learning / Research", "Personal Commitment", "Other"]
+                            ).map((c) => <option key={c} value={c} />)}
+                          </datalist>
+                        </div>
+                        <div>
+                          <label htmlFor="source" className="text-xs font-medium text-foreground/70 mb-1.5 block">
+                            {isRTL ? "المصدر" : "Source"}
+                          </label>
+                          <Input
+                            id="source"
+                            value={newItem.source}
+                            onChange={(e) => setNewItem((i) => ({ ...i, source: e.target.value }))}
+                            placeholder={isRTL ? "مثلا: زميل / واتساب" : "e.g. Colleague / WhatsApp"}
+                            className="h-10"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label htmlFor="hoursRecovered" className="text-xs font-medium text-foreground/70 mb-1.5 block">
+                          {isRTL ? "الساعات المستردة (تقدير)" : "Hours recovered (estimated)"}
+                        </label>
+                        <Input
+                          id="hoursRecovered"
+                          type="number"
+                          min="0"
+                          step="0.5"
+                          inputMode="decimal"
+                          value={newItem.hoursRecovered}
+                          onChange={(e) => setNewItem((i) => ({ ...i, hoursRecovered: e.target.value }))}
+                          placeholder={isRTL ? "مثلا: 1.5" : "e.g. 1.5"}
+                          className="h-10 w-full sm:w-40"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="flex items-center gap-2 pt-1">
                   <Button

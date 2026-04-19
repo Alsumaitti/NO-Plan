@@ -102,6 +102,9 @@ export const CreateDailyItemBody = zod.object({
   what: zod.string(),
   replacement: zod.string().nullish(),
   riskLevel: zod.number(),
+  source: zod.string().nullish(),
+  category: zod.string().nullish(),
+  hoursRecovered: zod.number().nullish(),
 });
 
 /**
@@ -116,6 +119,9 @@ export const UpdateDailyItemBody = zod.object({
   what: zod.string().optional(),
   replacement: zod.string().nullish(),
   riskLevel: zod.number().optional(),
+  source: zod.string().nullish(),
+  category: zod.string().nullish(),
+  hoursRecovered: zod.number().nullish(),
 });
 
 export const UpdateDailyItemResponse = zod.object({

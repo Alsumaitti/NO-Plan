@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Flame, Trophy, TrendingUp, Clock, ShieldBan, Calendar, Activity, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApp } from "@/lib/AppContext";
+import { useAuthFetch } from "@/lib/apiClient";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -55,17 +56,18 @@ function StatCard({
 export default function Dashboard() {
   const { T, lang } = useApp();
   const locale = lang === "ar" ? arSA : enUS;
+  const authFetch = useAuthFetch();
 
   const { data: stats, isLoading } = useQuery<DashboardStats>({
     queryKey: ["dashboard-stats"],
-    queryFn: () => fetch("/api/dashboard/stats").then(r => r.json()),
+    queryFn: () => authFetch("/api/dashboard/stats").then(r => r.json()),
     staleTime: 30000,
   });
 
   // Get widget preferences
   const { data: settings } = useQuery<{ dashboardWidgets?: string[] }>({
     queryKey: ["settings"],
-    queryFn: () => fetch("/api/settings").then(r => r.json()),
+    queryFn: () => authFetch("/api/settings").then(r => r.json()),
     staleTime: 120000,
   });
   const widgets = settings?.dashboardWidgets ?? ["stats", "streak", "activity", "categories", "lastLogin"];

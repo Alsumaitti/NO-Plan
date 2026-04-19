@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, gte, lte } from "drizzle-orm";
+import { eq, desc, and, gte, lte, inArray } from "drizzle-orm";
 import { db, logEntriesTable } from "@workspace/db";
 import {
   CreateLogEntryBody,
@@ -45,7 +45,7 @@ router.post("/log-entries", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(serializeRow(entry));
 });
 
-router.patch("/log-entries/:id", requireAuth, async (req, res): Promise<void> => {
+const handleUpdate = async (req: any, res: any): Promise<void> => {
   const params = UpdateLogEntryParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
   const parsed = UpdateLogEntryBody.safeParse(req.body);
@@ -57,7 +57,9 @@ router.patch("/log-entries/:id", requireAuth, async (req, res): Promise<void> =>
     .returning();
   if (!entry) { res.status(404).json({ error: "Not found" }); return; }
   res.json(UpdateLogEntryResponse.parse(serializeRow(entry)));
-});
+};
+router.patch("/log-entries/:id", requireAuth, handleUpdate);
+router.put("/log-entries/:id", requireAuth, handleUpdate);
 
 router.delete("/log-entries/:id", requireAuth, async (req, res): Promise<void> => {
   const params = DeleteLogEntryParams.safeParse(req.params);
@@ -70,9 +72,17 @@ router.delete("/log-entries/:id", requireAuth, async (req, res): Promise<void> =
   res.sendStatus(204);
 });
 
-// DELETE ALL for this user
+// Bulk delete by ids OR delete all when no ids provided
 router.delete("/log-entries", requireAuth, async (req, res): Promise<void> => {
-  await db.delete(logEntriesTable).where(eq(logEntriesTable.userId, req.userId));
+  const body = (req.body ?? {}) as { ids?: number[] };
+  const ids = Array.isArray(body.ids) ? body.ids.filter((n) => typeof n === "number") : [];
+  if (ids.length > 0) {
+    await db
+      .delete(logEntriesTable)
+      .where(and(eq(logEntriesTable.userId, req.userId), inArray(logEntriesTable.id, ids)));
+  } else {
+    await db.delete(logEntriesTable).where(eq(logEntriesTable.userId, req.userId));
+  }
   res.sendStatus(204);
 });
 

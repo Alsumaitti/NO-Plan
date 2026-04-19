@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuthFetch } from "@/lib/apiClient";
 
 const DEFAULT_CATEGORIES_AR = [
   "العمل / اجتماعات", "رقمي / تركيز", "اجتماعي / عائلي",
@@ -29,20 +30,22 @@ const WIDGET_OPTIONS = [
   { key: "lastLogin", labelAr: "آخر دخول", labelEn: "Last Login" },
 ];
 
-async function fetchSettings() {
-  const r = await fetch("/api/settings");
-  if (!r.ok) throw new Error("Failed");
-  return r.json();
-}
-
 export default function Settings() {
   const { lang, setLang, dark, setDark, T } = useApp();
   const qc = useQueryClient();
+  const authFetch = useAuthFetch();
   const [newCat, setNewCat] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const { data: settings } = useQuery({ queryKey: ["settings"], queryFn: fetchSettings });
+  const { data: settings } = useQuery({
+    queryKey: ["settings"],
+    queryFn: async () => {
+      const r = await authFetch("/api/settings");
+      if (!r.ok) throw new Error("Failed");
+      return r.json();
+    },
+  });
 
   const [customCats, setCustomCats] = useState<string[]>([]);
   const [dashWidgets, setDashWidgets] = useState<string[]>(["stats", "streak", "activity", "categories", "lastLogin"]);
@@ -56,7 +59,7 @@ export default function Settings() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: object) => {
-      const r = await fetch("/api/settings", {
+      const r = await authFetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -72,7 +75,7 @@ export default function Settings() {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      await fetch("/api/account-data", { method: "DELETE" });
+      await authFetch("/api/account-data", { method: "DELETE" });
     },
     onSuccess: () => {
       qc.clear();

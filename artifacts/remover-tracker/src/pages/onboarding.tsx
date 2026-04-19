@@ -4,15 +4,17 @@ import { useApp } from "@/lib/AppContext";
 import { Button } from "@/components/ui/button";
 import { ShieldBan, Globe, Sun, Moon, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuthFetch } from "@/lib/apiClient";
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
   const { lang, setLang, dark, setDark, T } = useApp();
+  const authFetch = useAuthFetch();
   const [step, setStep] = useState(0);
 
   const saveAndFinish = async () => {
     try {
-      await fetch("/api/settings", {
+      await authFetch("/api/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ language: lang, darkMode: dark, onboardingComplete: true }),

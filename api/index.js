@@ -59219,7 +59219,7 @@ __export(src_exports, {
   prioritiesTable: () => prioritiesTable,
   userSettingsTable: () => userSettingsTable
 });
-var Pool3, pool, db;
+var Pool3, getDatabaseUrl, pool, db;
 var init_src = __esm({
   "lib/db/src/index.ts"() {
     "use strict";
@@ -59228,12 +59228,10 @@ var init_src = __esm({
     init_schema2();
     init_schema2();
     ({ Pool: Pool3 } = esm_default);
-    if (!process.env.DATABASE_URL) {
-      throw new Error(
-        "DATABASE_URL must be set. Did you forget to provision a database?"
-      );
-    }
-    pool = new Pool3({ connectionString: process.env.DATABASE_URL });
+    getDatabaseUrl = () => process.env.DATABASE_URL || "";
+    pool = new Pool3({
+      connectionString: getDatabaseUrl()
+    });
     db = drizzle(pool, { schema: schema_exports });
   }
 });
@@ -71321,7 +71319,10 @@ var CreateDailyItemBody = objectType({
   date: stringType(),
   what: stringType(),
   replacement: stringType().nullish(),
-  riskLevel: numberType()
+  riskLevel: numberType(),
+  source: stringType().nullish(),
+  category: stringType().nullish(),
+  hoursRecovered: numberType().nullish()
 });
 var UpdateDailyItemParams = objectType({
   id: coerce.number()
@@ -71330,7 +71331,10 @@ var UpdateDailyItemBody = objectType({
   done: booleanType().optional(),
   what: stringType().optional(),
   replacement: stringType().nullish(),
-  riskLevel: numberType().optional()
+  riskLevel: numberType().optional(),
+  source: stringType().nullish(),
+  category: stringType().nullish(),
+  hoursRecovered: numberType().nullish()
 });
 var UpdateDailyItemResponse = objectType({
   id: numberType(),
@@ -71475,7 +71479,7 @@ router2.post("/log-entries", requireAuth, async (req, res) => {
   const [entry] = await db.insert(logEntriesTable).values({ ...parsed.data, userId: req.userId }).returning();
   res.status(201).json(serializeRow(entry));
 });
-router2.patch("/log-entries/:id", requireAuth, async (req, res) => {
+var handleUpdate = async (req, res) => {
   const params = UpdateLogEntryParams.safeParse(req.params);
   if (!params.success) {
     res.status(400).json({ error: params.error.message });
@@ -71492,7 +71496,9 @@ router2.patch("/log-entries/:id", requireAuth, async (req, res) => {
     return;
   }
   res.json(UpdateLogEntryResponse.parse(serializeRow(entry)));
-});
+};
+router2.patch("/log-entries/:id", requireAuth, handleUpdate);
+router2.put("/log-entries/:id", requireAuth, handleUpdate);
 router2.delete("/log-entries/:id", requireAuth, async (req, res) => {
   const params = DeleteLogEntryParams.safeParse(req.params);
   if (!params.success) {
@@ -71507,7 +71513,13 @@ router2.delete("/log-entries/:id", requireAuth, async (req, res) => {
   res.sendStatus(204);
 });
 router2.delete("/log-entries", requireAuth, async (req, res) => {
-  await db.delete(logEntriesTable).where(eq(logEntriesTable.userId, req.userId));
+  const body = req.body ?? {};
+  const ids = Array.isArray(body.ids) ? body.ids.filter((n) => typeof n === "number") : [];
+  if (ids.length > 0) {
+    await db.delete(logEntriesTable).where(and(eq(logEntriesTable.userId, req.userId), inArray(logEntriesTable.id, ids)));
+  } else {
+    await db.delete(logEntriesTable).where(eq(logEntriesTable.userId, req.userId));
+  }
   res.sendStatus(204);
 });
 var logEntries_default = router2;
@@ -71518,18 +71530,28 @@ init_drizzle_orm();
 init_src();
 var router3 = (0, import_express4.Router)();
 router3.get("/daily-items", requireAuth, async (req, res) => {
-  const date6 = typeof req.query.date === "string" ? req.query.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  const items = await db.select().from(dailyItemsTable).where(and(eq(dailyItemsTable.userId, req.userId), eq(dailyItemsTable.date, date6))).orderBy(desc(dailyItemsTable.createdAt));
-  res.json(GetDailyItemsResponse.parse(serializeRows(items)));
+  try {
+    const date6 = typeof req.query.date === "string" ? req.query.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+    const items = await db.select().from(dailyItemsTable).where(and(eq(dailyItemsTable.userId, req.userId), eq(dailyItemsTable.date, date6))).orderBy(desc(dailyItemsTable.createdAt));
+    res.json(GetDailyItemsResponse.parse(serializeRows(items)));
+  } catch (err) {
+    console.error("GET /daily-items error:", err);
+    res.status(500).json({ error: "Failed to fetch daily items" });
+  }
 });
 router3.post("/daily-items", requireAuth, async (req, res) => {
-  const parsed = CreateDailyItemBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
+  try {
+    const parsed = CreateDailyItemBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const [item] = await db.insert(dailyItemsTable).values({ ...parsed.data, userId: req.userId }).returning();
+    res.status(201).json(serializeRow(item));
+  } catch (err) {
+    console.error("POST /daily-items error:", err);
+    res.status(500).json({ error: "Failed to create daily item" });
   }
-  const [item] = await db.insert(dailyItemsTable).values({ ...parsed.data, userId: req.userId }).returning();
-  res.status(201).json(serializeRow(item));
 });
 router3.patch("/daily-items/:id", requireAuth, async (req, res) => {
   const params = UpdateDailyItemParams.safeParse(req.params);
@@ -71635,18 +71657,47 @@ init_drizzle_orm();
 init_src();
 var router5 = (0, import_express6.Router)();
 router5.get("/priorities", requireAuth, async (req, res) => {
+  const date6 = typeof req.query.date === "string" ? req.query.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
+  const [row] = await db.select().from(prioritiesTable).where(and(eq(prioritiesTable.userId, req.userId), eq(prioritiesTable.date, date6)));
+  const priorities = row ? [row.priority1, row.priority2, row.priority3].filter((p) => !!p) : [];
+  res.json({ date: date6, priorities });
+});
+router5.post("/priorities", requireAuth, async (req, res) => {
   const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  const [row] = await db.select().from(prioritiesTable).where(and(eq(prioritiesTable.userId, req.userId), eq(prioritiesTable.date, today)));
-  res.json(row ? serializeRow(row) : { date: today, priority1: null, priority2: null, priority3: null });
+  const body = req.body;
+  const date6 = body.date ?? today;
+  const list = Array.isArray(body.priorities) ? body.priorities.map((p) => p?.trim() ?? "").filter(Boolean) : [];
+  const [p1, p2, p3] = [list[0] ?? null, list[1] ?? null, list[2] ?? null];
+  const [row] = await db.insert(prioritiesTable).values({ userId: req.userId, date: date6, priority1: p1, priority2: p2, priority3: p3 }).onConflictDoUpdate({
+    target: [prioritiesTable.userId, prioritiesTable.date],
+    set: { priority1: p1, priority2: p2, priority3: p3 }
+  }).returning();
+  res.json({
+    date: row.date,
+    priorities: [row.priority1, row.priority2, row.priority3].filter((p) => !!p)
+  });
 });
 router5.put("/priorities", requireAuth, async (req, res) => {
   const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
-  const { priority1, priority2, priority3 } = req.body;
-  const [row] = await db.insert(prioritiesTable).values({ userId: req.userId, date: today, priority1, priority2, priority3 }).onConflictDoUpdate({
+  const body = req.body;
+  const date6 = body.date ?? today;
+  let p1 = body.priority1 ?? null;
+  let p2 = body.priority2 ?? null;
+  let p3 = body.priority3 ?? null;
+  if (Array.isArray(body.priorities)) {
+    const list = body.priorities.map((p) => p?.trim() ?? "").filter(Boolean);
+    p1 = list[0] ?? null;
+    p2 = list[1] ?? null;
+    p3 = list[2] ?? null;
+  }
+  const [row] = await db.insert(prioritiesTable).values({ userId: req.userId, date: date6, priority1: p1, priority2: p2, priority3: p3 }).onConflictDoUpdate({
     target: [prioritiesTable.userId, prioritiesTable.date],
-    set: { priority1, priority2, priority3 }
+    set: { priority1: p1, priority2: p2, priority3: p3 }
   }).returning();
-  res.json(serializeRow(row));
+  res.json({
+    date: row.date,
+    priorities: [row.priority1, row.priority2, row.priority3].filter((p) => !!p)
+  });
 });
 var priorities_default = router5;
 
@@ -72084,6 +72135,10 @@ app.use(import_express12.default.json());
 app.use(import_express12.default.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
 app.use("/api", routes_default);
+app.use((err, _req, res, _next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error", message: err?.message });
+});
 var app_default = app;
 
 // api-src/vercel.mjs

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Plus, ShieldBan } from "lucide-react";
 import { useApp } from "@/lib/AppContext";
+import { useAuthFetch } from "@/lib/apiClient";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface MasterRule {
@@ -19,6 +20,7 @@ interface MasterRule {
 export default function MasterRules() {
   const { T, lang } = useApp();
   const qc = useQueryClient();
+  const authFetch = useAuthFetch();
   const [newRule, setNewRule] = useState("");
   const [newReason, setNewReason] = useState("");
   const [newCategory, setNewCategory] = useState("");
@@ -26,13 +28,13 @@ export default function MasterRules() {
 
   const { data: rules = [], isLoading } = useQuery<MasterRule[]>({
     queryKey: ["master-rules"],
-    queryFn: () => fetch("/api/master-rules").then(r => r.json()),
+    queryFn: () => authFetch("/api/master-rules").then(r => r.json()),
     staleTime: 60000,
   });
 
   const { data: settings } = useQuery<{ customCategories?: string[] }>({
     queryKey: ["settings"],
-    queryFn: () => fetch("/api/settings").then(r => r.json()),
+    queryFn: () => authFetch("/api/settings").then(r => r.json()),
     staleTime: 120000,
   });
 
@@ -44,7 +46,7 @@ export default function MasterRules() {
 
   const addMutation = useMutation({
     mutationFn: async (data: { rule: string; reason?: string; category?: string }) => {
-      const r = await fetch("/api/master-rules", {
+      const r = await authFetch("/api/master-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -56,7 +58,7 @@ export default function MasterRules() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: number) => {
-      await fetch(`/api/master-rules/${id}`, { method: "DELETE" });
+      await authFetch(`/api/master-rules/${id}`, { method: "DELETE" });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["master-rules"] }),
   });
