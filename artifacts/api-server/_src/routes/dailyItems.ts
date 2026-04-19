@@ -16,26 +16,36 @@ const router: IRouter = Router();
 
 // GET /daily-items?date=yyyy-MM-dd
 router.get("/daily-items", requireAuth, async (req, res): Promise<void> => {
-  const date = typeof req.query.date === "string" ? req.query.date : new Date().toISOString().split("T")[0];
-  const items = await db
-    .select()
-    .from(dailyItemsTable)
-    .where(and(eq(dailyItemsTable.userId, req.userId), eq(dailyItemsTable.date, date)))
-    .orderBy(desc(dailyItemsTable.createdAt));
-  res.json(GetDailyItemsResponse.parse(serializeRows(items)));
+  try {
+    const date = typeof req.query.date === "string" ? req.query.date : new Date().toISOString().split("T")[0];
+    const items = await db
+      .select()
+      .from(dailyItemsTable)
+      .where(and(eq(dailyItemsTable.userId, req.userId), eq(dailyItemsTable.date, date)))
+      .orderBy(desc(dailyItemsTable.createdAt));
+    res.json(GetDailyItemsResponse.parse(serializeRows(items)));
+  } catch (err) {
+    console.error("GET /daily-items error:", err);
+    res.status(500).json({ error: "Failed to fetch daily items" });
+  }
 });
 
 router.post("/daily-items", requireAuth, async (req, res): Promise<void> => {
-  const parsed = CreateDailyItemBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.message });
-    return;
+  try {
+    const parsed = CreateDailyItemBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const [item] = await db
+      .insert(dailyItemsTable)
+      .values({ ...parsed.data, userId: req.userId })
+      .returning();
+    res.status(201).json(serializeRow(item));
+  } catch (err) {
+    console.error("POST /daily-items error:", err);
+    res.status(500).json({ error: "Failed to create daily item" });
   }
-  const [item] = await db
-    .insert(dailyItemsTable)
-    .values({ ...parsed.data, userId: req.userId })
-    .returning();
-  res.status(201).json(serializeRow(item));
 });
 
 router.patch("/daily-items/:id", requireAuth, async (req, res): Promise<void> => {

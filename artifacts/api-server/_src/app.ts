@@ -36,4 +36,10 @@ app.use(clerkMiddleware());
 
 app.use("/api", router);
 
+// Global error handler
+app.use((err: any, _req: any, res: any, _next: any) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({ error: "Internal server error", message: err?.message });
+});
+
 export default app;
