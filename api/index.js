@@ -72086,7 +72086,7 @@ app.use(clerkMiddleware());
 app.use("/api", routes_default);
 var app_default = app;
 
-// api-src/vercel.ts
+// api-src/vercel.mjs
 var vercel_default = app_default;
 var config2 = {
   maxDuration: 30
