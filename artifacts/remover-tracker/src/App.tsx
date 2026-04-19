@@ -25,7 +25,33 @@ function stripBase(path: string): string {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
 }
 
-if (!clerkPubKey) throw new Error("Missing VITE_CLERK_PUBLISHABLE_KEY");
+// Graceful fallback screen when the publishable key is missing (e.g. a fresh
+// Vercel deploy where the env var has not yet been set). Prevents a blank
+// white screen and tells the operator exactly what to do.
+function MissingClerkKeyScreen() {
+  return (
+    <div className="min-h-[100dvh] flex items-center justify-center bg-parchment px-6 text-ink">
+      <div className="max-w-lg w-full bg-card border border-border rounded-2xl shadow-xl p-8 space-y-4">
+        <h1 className="text-2xl font-bold">Authentication not configured</h1>
+        <p className="text-muted-foreground leading-relaxed">
+          This deployment is missing the <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-sm">VITE_CLERK_PUBLISHABLE_KEY</code> environment variable.
+        </p>
+        <ol className="list-decimal ms-5 space-y-2 text-sm leading-relaxed">
+          <li>Open your Vercel project → <strong>Settings → Environment Variables</strong>.</li>
+          <li>
+            Add <code className="font-mono">VITE_CLERK_PUBLISHABLE_KEY</code> (starts with <code className="font-mono">pk_</code>)
+            and <code className="font-mono">CLERK_SECRET_KEY</code> (starts with <code className="font-mono">sk_</code>)
+            from <a className="underline" href="https://dashboard.clerk.com" target="_blank" rel="noreferrer">dashboard.clerk.com</a>.
+          </li>
+          <li>Redeploy — Vite inlines the publishable key at build time, so env changes alone will not take effect.</li>
+        </ol>
+        <p className="text-xs text-muted-foreground pt-2 border-t border-border">
+          See <code className="font-mono">DEPLOY.md</code> for the full checklist.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 const clerkAppearance = {
   options: {
@@ -192,6 +218,7 @@ function ClerkProviderWithRoutes() {
 }
 
 function App() {
+  if (!clerkPubKey) return <MissingClerkKeyScreen />;
   return (
     <WouterRouter base={basePath}>
       <ClerkProviderWithRoutes />
