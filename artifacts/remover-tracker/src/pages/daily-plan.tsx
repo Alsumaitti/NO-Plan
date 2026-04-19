@@ -521,7 +521,7 @@ export default function DailyPlan() {
                 variant="outline"
                 size="sm"
                 className="mt-3 h-9"
-                onClick={() => itemsQuery.reauthFetch()}
+                onClick={() => itemsQuery.refetch()}
               >
                 {T("retry", isRTL ? "إعادة المحاولة" : "Retry")}
               </Button>
