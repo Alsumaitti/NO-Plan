@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@clerk/react";
 import {
   Plus, Trash2, CheckCircle2, AlertTriangle, CalendarCheck,
   Zap, Target, Timer, MapPin, Archive as ArchiveIcon,
@@ -124,16 +125,25 @@ function SkeletonRow() {
 export default function DailyPlan() {
   const { T, lang } = useApp();
   const qc = useQueryClient();
+  const { getToken } = useAuth();
   const reduceMotion = useReducedMotion();
   const locale = lang === "ar" ? arSA : enUS;
   const riskLabels = lang === "ar" ? RISK_LABELS_AR : RISK_LABELS_EN;
   const isRTL = lang === "ar";
 
+  // Helper to add Clerk token to fetch requests
+  const authFetch = async (url: string, options?: RequestInit) => {
+    const token = await getToken();
+    const headers = new Headers(options?.headers || {});
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return fetch(url, { ...options, headers });
+  };
+
   // ---- Queries ----
   const itemsQuery = useQuery<DailyItem[]>({
     queryKey: ["daily-items", today],
     queryFn: () =>
-      fetch(`/api/daily-items?date=${today}`)
+      authFetch(`/api/daily-items?date=${today}`)
         .then((r) => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
     staleTime: 30_000,
   });
@@ -142,7 +152,7 @@ export default function DailyPlan() {
   const pastDatesQuery = useQuery<string[]>({
     queryKey: ["daily-items-past-dates"],
     queryFn: () =>
-      fetch("/api/daily-items/past-dates")
+      authFetch("/api/daily-items/past-dates")
         .then((r) => r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))),
     staleTime: 60_000,
   });
@@ -150,13 +160,13 @@ export default function DailyPlan() {
 
   const prioritiesQuery = useQuery<{ priorities: string[] }>({
     queryKey: ["priorities", today],
-    queryFn: () => fetch(`/api/priorities?date=${today}`).then((r) => r.json()),
+    queryFn: () => authFetch(`/api/priorities?date=${today}`).then((r) => r.json()),
     staleTime: 30_000,
   });
 
   const ifThenQuery = useQuery<IfThenPlan[]>({
     queryKey: ["if-then-plans"],
-    queryFn: () => fetch("/api/if-then").then((r) => r.json()),
+    queryFn: () => authFetch("/api/if-then").then((r) => r.json()),
     staleTime: 60_000,
   });
   const ifThenPlans = ifThenQuery.data ?? [];
@@ -174,7 +184,7 @@ export default function DailyPlan() {
   // ---- Mutations ----
   const addItem = useMutation({
     mutationFn: (data: { what: string; replacement?: string; riskLevel: number }) =>
-      fetch("/api/daily-items", {
+      authFetch("/api/daily-items", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, date: today }),
@@ -188,7 +198,7 @@ export default function DailyPlan() {
 
   const toggleDone = useMutation({
     mutationFn: ({ id, done }: { id: number; done: boolean }) =>
-      fetch(`/api/daily-items/${id}`, {
+      authFetch(`/api/daily-items/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done }),
@@ -209,7 +219,7 @@ export default function DailyPlan() {
 
   const deleteItem = useMutation({
     mutationFn: (id: number) =>
-      fetch(`/api/daily-items/${id}`, { method: "DELETE" }).then((r) =>
+      authFetch(`/api/daily-items/${id}`, { method: "DELETE" }).then((r) =>
         r.ok ? true : Promise.reject(new Error(`${r.status}`)),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["daily-items", today] }),
@@ -217,7 +227,7 @@ export default function DailyPlan() {
 
   const archivePast = useMutation({
     mutationFn: (date: string) =>
-      fetch("/api/daily-items/archive", {
+      authFetch("/api/daily-items/archive", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date }),
@@ -234,7 +244,7 @@ export default function DailyPlan() {
 
   const savePriorities = useMutation({
     mutationFn: (ps: string[]) =>
-      fetch("/api/priorities", {
+      authFetch("/api/priorities", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date: today, priorities: ps.filter((p) => p.trim()) }),
@@ -244,7 +254,7 @@ export default function DailyPlan() {
 
   const addIfThen = useMutation({
     mutationFn: (data: { trigger: string; response: string }) =>
-      fetch("/api/if-then", {
+      authFetch("/api/if-then", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -258,7 +268,7 @@ export default function DailyPlan() {
 
   const deleteIfThen = useMutation({
     mutationFn: (id: number) =>
-      fetch(`/api/if-then/${id}`, { method: "DELETE" }).then((r) =>
+      authFetch(`/api/if-then/${id}`, { method: "DELETE" }).then((r) =>
         r.ok ? true : Promise.reject(new Error(`${r.status}`)),
       ),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["if-then-plans"] }),
@@ -511,7 +521,7 @@ export default function DailyPlan() {
                 variant="outline"
                 size="sm"
                 className="mt-3 h-9"
-                onClick={() => itemsQuery.refetch()}
+                onClick={() => itemsQuery.reauthFetch()}
               >
                 {T("retry", isRTL ? "إعادة المحاولة" : "Retry")}
               </Button>
