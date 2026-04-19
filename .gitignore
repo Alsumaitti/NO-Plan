@@ -51,5 +51,6 @@ Thumbs.db
 .vercel
 .env*.local
 
-# Built API function
-api/index.js
+# NOTE: api/index.js (the bundled Vercel Function output) IS committed on
+# purpose — Vercel's function validator needs to see it before running the
+# buildCommand. The buildCommand re-runs api/build.mjs to refresh it.
