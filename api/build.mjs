@@ -7,10 +7,7 @@ import { build as esbuild } from "esbuild";
 
 const apiDir = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.dirname(apiDir);
-const entry = path.resolve(
-  projectRoot,
-  "artifacts/api-server/src/vercel.ts",
-);
+const entry = path.resolve(projectRoot, "api-src/vercel.ts");
 
 async function build() {
   console.log("Building Vercel API function...");

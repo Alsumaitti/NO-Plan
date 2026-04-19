@@ -1,0 +1,8 @@
+# Dev/tooling artifacts we don't need on Vercel
+.claude
+.replit
+replit.nix
+attached_assets
+design-system
+scripts
+artifacts/mockup-sandbox
