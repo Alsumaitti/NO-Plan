@@ -4,6 +4,7 @@ import { z } from "zod/v4";
 
 export const masterRulesTable = pgTable("master_rules", {
   id: serial("id").primaryKey(),
+  userId: text("user_id").notNull().default(""),
   category: text("category").notNull(),
   what: text("what").notNull(),
   why: text("why"),
@@ -16,6 +17,7 @@ export const insertMasterRuleSchema = createInsertSchema(
   masterRulesTable
 ).omit({
   id: true,
+  userId: true,
   createdAt: true,
 });
 export type InsertMasterRule = z.infer<typeof insertMasterRuleSchema>;

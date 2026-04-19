@@ -1,180 +1,193 @@
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
-import { 
-  useGetDashboardStats, 
-  getGetDashboardStatsQueryKey,
-  useGetDashboardActivity,
-  getGetDashboardActivityQueryKey,
-  useGetDashboardByCategory,
-  getGetDashboardByCategoryQueryKey,
-  useGetDailyItems,
-  getGetDailyItemsQueryKey
-} from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Flame, Target, ShieldBan, Clock } from "lucide-react";
-import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { Flame, Trophy, TrendingUp, Clock, ShieldBan, Calendar, Activity, Star } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useApp } from "@/lib/AppContext";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, Legend
+} from "recharts";
+import { format, subDays, parseISO } from "date-fns";
+import { arSA, enUS } from "date-fns/locale";
 
-const COLORS = ['#C8553D', '#0E5B5B', '#C9A14A', '#8A6A22', '#6B8E4E', '#1E2D46', '#0F1B2D', '#a1a1aa'];
-
-export default function Dashboard() {
-  const { data: stats } = useGetDashboardStats({ query: { queryKey: getGetDashboardStatsQueryKey() } });
-  const { data: activity } = useGetDashboardActivity({ query: { queryKey: getGetDashboardActivityQueryKey() } });
-  const { data: categories } = useGetDashboardByCategory({ query: { queryKey: getGetDashboardByCategoryQueryKey() } });
-  const { data: dailyItems } = useGetDailyItems({ query: { queryKey: getGetDailyItemsQueryKey() } });
-
-  const today = format(new Date(), "EEEE، d MMMM", { locale: ar });
-
-  return (
-    <div className="space-y-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <h2 className="text-3xl font-display font-bold text-ink">مرحباً بك</h2>
-          <p className="text-muted-foreground mt-1">{today}</p>
-        </div>
-      </div>
-
-      {/* Motivational Quote */}
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="relative bg-parchment-2 p-8 rounded-xl border border-gold/20 overflow-hidden"
-      >
-        <div className="absolute top-4 right-4 text-gold opacity-20 text-6xl font-serif">"</div>
-        <p className="text-xl md:text-2xl font-serif text-ink-2 text-center leading-relaxed relative z-10">
-          ما لا تفعله يحدد ما يمكنك فعله. كل "لا" صغيرة هي "نعم" كبيرة لشيء أهم.
-        </p>
-      </motion.div>
-
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard 
-          title="معدل الالتزام" 
-          value={`${stats?.commitmentRate ?? 0}%`} 
-          icon={<Target className="w-5 h-5 text-teal" />}
-          gradient="bg-gradient-to-r from-teal to-teal/60"
-        />
-        <KPICard 
-          title="سلسلة الاستمرار" 
-          value={`${stats?.streak ?? 0} أيام`} 
-          icon={<Flame className="w-5 h-5 text-coral" />}
-          gradient="bg-gradient-to-r from-coral to-coral/60"
-        />
-        <KPICard 
-          title="إجمالي اللاءات" 
-          value={stats?.totalNos ?? 0} 
-          icon={<ShieldBan className="w-5 h-5 text-gold-deep" />}
-          gradient="bg-gradient-to-r from-gold-deep to-gold"
-        />
-        <KPICard 
-          title="ساعات مستردة" 
-          value={stats?.hoursRecovered ?? 0} 
-          icon={<Clock className="w-5 h-5 text-sage" />}
-          gradient="bg-gradient-to-r from-sage to-sage/60"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Activity Chart */}
-        <Card className="border-parchment-2 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">نشاط آخر 14 يوم</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {activity && activity.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={activity}>
-                  <XAxis dataKey="date" tickFormatter={(val) => format(new Date(val), 'd MMM', { locale: ar })} />
-                  <YAxis />
-                  <Tooltip labelFormatter={(val) => format(new Date(val), 'EEEE، d MMMM', { locale: ar })} />
-                  <Bar dataKey="count" fill="var(--color-gold-deep)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">لا توجد بيانات كافية</div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Categories Chart */}
-        <Card className="border-parchment-2 shadow-sm">
-          <CardHeader>
-            <CardTitle className="font-display">توزيع الفئات</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {categories && categories.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={categories}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="count"
-                    nameKey="category"
-                  >
-                    {categories.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-muted-foreground">لا توجد بيانات كافية</div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Today's Preview */}
-      <Card className="border-parchment-2 shadow-sm">
-        <CardHeader>
-          <CardTitle className="font-display">متبقي لليوم</CardTitle>
-          <CardDescription>قائمة الممنوعات المخطط لها اليوم</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {dailyItems && dailyItems.length > 0 ? (
-            <div className="space-y-3">
-              {dailyItems.filter(item => !item.done).map(item => (
-                <div key={item.id} className="flex items-center justify-between p-3 bg-parchment/50 rounded-lg border border-border">
-                  <span className="font-medium">{item.what}</span>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>خطر: {item.riskLevel}/5</span>
-                  </div>
-                </div>
-              ))}
-              {dailyItems.filter(item => !item.done).length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">تم إنجاز كل شيء!</div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">لا توجد خطة لليوم. اذهب إلى "خطة اليوم" لإضافتها.</div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+interface DashboardStats {
+  totalNos: number;
+  weekNos: number;
+  hoursRecovered: number;
+  commitmentRate: number;
+  streak: number;
+  bestStreak: number;
+  todayNos: number;
+  monthNos: number;
+  lastLoginAt?: string;
+  recentActivity: { date: string; count: number; held: number; caved: number; partial: number }[];
+  categoryBreakdown: { category: string; count: number }[];
 }
 
-function KPICard({ title, value, icon, gradient }: { title: string, value: string | number, icon: React.ReactNode, gradient: string }) {
+const COLORS = ["#C9A94A", "#0E5B5B", "#C8553D", "#6B8E4E", "#8B6914", "#1E6B6B", "#A0522D", "#4A7C59"];
+
+function StatCard({
+  icon: Icon, label, value, sub, color
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: number | string;
+  sub?: string;
+  color?: string;
+}) {
   return (
-    <Card className="overflow-hidden border-parchment-2 shadow-sm relative">
-      <div className={`h-1 w-full ${gradient} absolute top-0 left-0`} />
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
+    <Card className="border-parchment-2 shadow-sm hover:shadow-md transition-shadow">
+      <CardContent className="pt-5 pb-4 px-5">
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground mb-1">{title}</p>
-            <h3 className="text-2xl font-bold text-ink">{value}</h3>
+            <p className="text-xs text-muted-foreground font-medium mb-1">{label}</p>
+            <p className={`text-3xl font-bold font-display ${color ?? "text-ink"}`}>{value}</p>
+            {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
           </div>
-          <div className="p-3 bg-parchment rounded-full">
-            {icon}
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-opacity-10 ${color ? `bg-current` : "bg-gold/10"}`} style={{ backgroundColor: "rgba(201,169,74,0.12)" }}>
+            <Icon className={`w-5 h-5 ${color ?? "text-gold"}`} />
           </div>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export default function Dashboard() {
+  const { T, lang } = useApp();
+  const locale = lang === "ar" ? arSA : enUS;
+
+  const { data: stats, isLoading } = useQuery<DashboardStats>({
+    queryKey: ["dashboard-stats"],
+    queryFn: () => fetch("/api/dashboard/stats").then(r => r.json()),
+    staleTime: 30000,
+  });
+
+  // Get widget preferences
+  const { data: settings } = useQuery<{ dashboardWidgets?: string[] }>({
+    queryKey: ["settings"],
+    queryFn: () => fetch("/api/settings").then(r => r.json()),
+    staleTime: 120000,
+  });
+  const widgets = settings?.dashboardWidgets ?? ["stats", "streak", "activity", "categories", "lastLogin"];
+  const showWidget = (key: string) => widgets.includes(key);
+
+  if (isLoading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  const s = stats ?? {} as DashboardStats;
+
+  const activityData = (s.recentActivity ?? []).map(d => ({
+    date: format(parseISO(d.date), "dd/MM", { locale }),
+    [T("held")]: d.held,
+    [T("partial")]: d.partial,
+    [T("caved")]: d.caved,
+  }));
+
+  const categoryData = (s.categoryBreakdown ?? [])
+    .filter(c => c.count > 0)
+    .map(c => ({ name: c.category || (lang === "ar" ? "أخرى" : "Other"), value: c.count }));
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h2 className="text-3xl font-display font-bold text-ink">{T("dashboard")}</h2>
+        <p className="text-muted-foreground mt-1 font-serif italic text-sm">{T("appMotto")}</p>
+      </div>
+
+      {/* KPI Stats */}
+      {showWidget("stats") && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard icon={ShieldBan} label={T("totalNos")} value={s.totalNos ?? 0} color="text-gold" />
+          <StatCard icon={Calendar} label={T("weekNos")} value={s.weekNos ?? 0} />
+          <StatCard icon={Clock} label={T("hoursRecovered")} value={s.hoursRecovered ?? 0} sub={lang === "ar" ? "ساعة" : "hrs"} />
+          <StatCard
+            icon={TrendingUp}
+            label={T("commitmentRate")}
+            value={`${s.commitmentRate ?? 0}%`}
+            color={(s.commitmentRate ?? 0) >= 70 ? "text-green-600" : (s.commitmentRate ?? 0) >= 40 ? "text-amber-600" : "text-red-600"}
+          />
+        </div>
+      )}
+
+      {/* Streak Row */}
+      {showWidget("streak") && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard icon={Flame} label={T("streak")} value={s.streak ?? 0} sub={T("days")} color="text-amber-600" />
+          <StatCard icon={Trophy} label={T("bestStreak")} value={s.bestStreak ?? 0} sub={T("days")} color="text-yellow-600" />
+          <StatCard icon={Star} label={T("todayNos")} value={s.todayNos ?? 0} color="text-teal" />
+          <StatCard icon={Activity} label={T("monthNos")} value={s.monthNos ?? 0} />
+        </div>
+      )}
+
+      {/* Last Login */}
+      {showWidget("lastLogin") && s.lastLoginAt && (
+        <Card className="border-parchment-2 shadow-sm">
+          <CardContent className="py-3 px-5">
+            <p className="text-sm text-muted-foreground">
+              {T("lastLogin")}: <span className="text-ink font-medium">
+                {format(parseISO(s.lastLoginAt), "PPP p", { locale })}
+              </span>
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Activity Bar Chart */}
+        {showWidget("activity") && activityData.length > 0 && (
+          <Card className="border-parchment-2 shadow-sm">
+            <CardHeader><CardTitle className="font-display text-base">{T("recentActivity")}</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={activityData} margin={{ top: 4, right: 4, left: -30, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                  <Bar dataKey={T("held")} fill="#0E5B5B" radius={[4, 4, 0, 0]} stackId="a" />
+                  <Bar dataKey={T("partial")} fill="#C9A94A" radius={[0, 0, 0, 0]} stackId="a" />
+                  <Bar dataKey={T("caved")} fill="#C8553D" radius={[0, 0, 4, 4]} stackId="a" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Category Breakdown */}
+        {showWidget("categories") && categoryData.length > 0 && (
+          <Card className="border-parchment-2 shadow-sm">
+            <CardHeader><CardTitle className="font-display text-base">{T("categoryBreakdown")}</CardTitle></CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="value" paddingAngle={3}>
+                    {categoryData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12 }} />
+                  <Legend iconSize={10} iconType="circle" formatter={(v) => <span className="text-xs">{v}</span>} />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Empty state */}
+      {!s.totalNos && (
+        <Card className="border-dashed border-parchment-2 bg-transparent shadow-none">
+          <CardContent className="py-16 text-center">
+            <ShieldBan className="w-12 h-12 text-gold/40 mx-auto mb-4" />
+            <p className="text-muted-foreground font-serif italic text-lg">{T("noData")}</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              {lang === "ar" ? "ابدأ بتسجيل أول قرار في سجل الإزالة" : "Start by logging your first decision in the tracker"}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

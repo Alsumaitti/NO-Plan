@@ -1,373 +1,373 @@
-import { useState } from "react";
-import { format } from "date-fns";
-import { ar } from "date-fns/locale";
-import {
-  useGetLogEntries,
-  getGetLogEntriesQueryKey,
-  useCreateLogEntry,
-  useDeleteLogEntry,
-} from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useMemo } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Download, Search, X, Filter, Trash2, ShieldBan } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Plus, Download, FileJson, FileText, X, Search } from "lucide-react";
-import { CATEGORIES, getCategoryIcon, OUTCOMES } from "@/lib/constants";
-import { getApiUrl } from "@/lib/api";
-import { useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useApp } from "@/lib/AppContext";
+import { motion, AnimatePresence } from "framer-motion";
+import { format, parseISO } from "date-fns";
+import { arSA, enUS } from "date-fns/locale";
 
-const BASE = getApiUrl();
+interface LogEntry {
+  id: number;
+  date: string;
+  subject: string;
+  source?: string;
+  category?: string;
+  outcome: "held" | "partial" | "caved";
+  hoursRecovered?: number;
+  notes?: string;
+}
 
-const EMPTY_FORM = {
-  date: format(new Date(), "yyyy-MM-dd"),
-  what: "",
-  source: "",
-  category: CATEGORIES[0],
-  hoursRecovered: "",
-  outcome: "Held" as "Held" | "Partial" | "Caved",
-  note: "",
+const DEFAULT_CATEGORIES_AR = ["العمل / اجتماعات", "رقمي / تركيز", "اجتماعي / عائلي", "صحّة / طعام", "ماليّ", "تعلّم / بحث", "التزام شخصي", "أخرى"];
+const DEFAULT_CATEGORIES_EN = ["Work / Meetings", "Digital / Focus", "Social / Family", "Health / Food", "Financial", "Learning / Research", "Personal Commitment", "Other"];
+
+const OUTCOME_COLORS: Record<string, string> = {
+  held: "bg-green-100 text-green-800 border-green-200",
+  partial: "bg-amber-100 text-amber-800 border-amber-200",
+  caved: "bg-red-100 text-red-800 border-red-200",
 };
 
+function outcomeLabel(o: string, T: (k: string) => string) {
+  if (o === "held") return T("held");
+  if (o === "partial") return T("partial");
+  if (o === "caved") return T("caved");
+  return o;
+}
+
 export default function Tracker() {
-  const queryClient = useQueryClient();
-  const { data: entries } = useGetLogEntries({ query: { queryKey: getGetLogEntriesQueryKey() } });
-  const createEntry = useCreateLogEntry();
-  const deleteEntry = useDeleteLogEntry();
+  const { T, lang } = useApp();
+  const qc = useQueryClient();
+  const locale = lang === "ar" ? arSA : enUS;
 
-  const [isAdding, setIsAdding] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [searchText, setSearchText] = useState("");
-  const [filterCategory, setFilterCategory] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterCat, setFilterCat] = useState("");
   const [filterOutcome, setFilterOutcome] = useState("");
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [exportLang, setExportLang] = useState<"ar" | "en">(lang);
+  const [editingEntry, setEditingEntry] = useState<Partial<LogEntry> | null>(null);
+  const [deleteIds, setDeleteIds] = useState<number[]>([]);
 
-  const setField = <K extends keyof typeof EMPTY_FORM>(key: K, val: (typeof EMPTY_FORM)[K]) =>
-    setForm((f) => ({ ...f, [key]: val }));
+  const { data: settings } = useQuery<{ customCategories?: string[] }>({ queryKey: ["settings"], queryFn: () => fetch("/api/settings").then(r => r.json()), staleTime: 120000 });
+  const categories = (settings?.customCategories?.length ? settings.customCategories : (lang === "en" ? DEFAULT_CATEGORIES_EN : DEFAULT_CATEGORIES_AR));
 
-  const handleSave = () => {
-    if (!form.what.trim() || !form.source.trim()) return;
-    createEntry.mutate(
-      {
-        data: {
-          date: form.date,
-          what: form.what.trim(),
-          source: form.source.trim(),
-          category: form.category,
-          hoursRecovered: form.hoursRecovered ? parseFloat(form.hoursRecovered) : null,
-          outcome: form.outcome,
-          note: form.note.trim() || null,
-        },
-      },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getGetLogEntriesQueryKey() });
-          setIsAdding(false);
-          setForm(EMPTY_FORM);
-        },
-      }
-    );
-  };
-
-  const handleExport = (fmt: "json" | "csv") => {
-    const a = document.createElement("a");
-    a.href = `${BASE}/export?format=${fmt}`;
-    a.download = `remover-tracker-${format(new Date(), "yyyy-MM-dd")}.${fmt}`;
-    a.click();
-  };
-
-  const filtered = (entries ?? []).filter((e) => {
-    if (searchText && !e.what.includes(searchText) && !e.source.includes(searchText) && !(e.note ?? "").includes(searchText)) return false;
-    if (filterCategory && e.category !== filterCategory) return false;
-    if (filterOutcome && e.outcome !== filterOutcome) return false;
-    return true;
+  const queryKey = ["log-entries", filterFrom, filterTo, filterCat, filterOutcome];
+  const { data: entries = [], isLoading } = useQuery<LogEntry[]>({
+    queryKey,
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (filterFrom) params.set("from", filterFrom);
+      if (filterTo) params.set("to", filterTo);
+      if (filterCat) params.set("category", filterCat);
+      if (filterOutcome) params.set("outcome", filterOutcome);
+      return fetch(`/api/log-entries?${params}`).then(r => r.json());
+    },
+    staleTime: 30000,
   });
 
-  const hasFilters = !!searchText || !!filterCategory || !!filterOutcome;
+  const filtered = useMemo(() => {
+    if (!searchTerm.trim()) return entries;
+    const q = searchTerm.toLowerCase();
+    return entries.filter(e => e.subject?.toLowerCase().includes(q) || e.source?.toLowerCase().includes(q) || e.notes?.toLowerCase().includes(q));
+  }, [entries, searchTerm]);
+
+  const saveMutation = useMutation({
+    mutationFn: async (entry: Partial<LogEntry>) => {
+      const method = entry.id ? "PUT" : "POST";
+      const url = entry.id ? `/api/log-entries/${entry.id}` : "/api/log-entries";
+      const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) });
+      return r.json();
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["log-entries"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setShowForm(false); setEditingEntry(null); },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      await fetch("/api/log-entries", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids }) });
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["log-entries"] }); qc.invalidateQueries({ queryKey: ["dashboard-stats"] }); setDeleteIds([]); },
+  });
+
+  const hasFilters = filterCat || filterOutcome || filterFrom || filterTo || searchTerm;
+
+  const clearFilters = () => {
+    setFilterCat(""); setFilterOutcome(""); setFilterFrom(""); setFilterTo(""); setSearchTerm("");
+  };
+
+  const handleExport = () => {
+    const params = new URLSearchParams();
+    if (filterFrom) params.set("from", filterFrom);
+    if (filterTo) params.set("to", filterTo);
+    if (filterCat) params.set("category", filterCat);
+    if (filterOutcome) params.set("outcome", filterOutcome);
+    params.set("lang", exportLang);
+    window.open(`/api/export?${params}`, "_blank");
+  };
+
+  const form = editingEntry ?? {};
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div>
-          <h2 className="text-3xl font-display font-bold text-ink">سجل الإزالة</h2>
-          <p className="text-muted-foreground mt-1">توثيق كل موقف قلت فيه "لا"</p>
+          <h2 className="text-3xl font-display font-bold text-ink">{T("logTitle")}</h2>
+          <p className="text-muted-foreground text-sm mt-1">{T("logSubtitle")}</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap self-start">
-          {/* Export buttons */}
-          <div className="flex items-center gap-1 border border-border rounded-lg p-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1 text-muted-foreground hover:text-ink"
-              onClick={() => handleExport("json")}
-              title="تحميل JSON"
-            >
-              <FileJson className="w-3.5 h-3.5" />
-              JSON
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs gap-1 text-muted-foreground hover:text-ink"
-              onClick={() => handleExport("csv")}
-              title="تحميل CSV"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              CSV
-            </Button>
-          </div>
-          <Button
-            onClick={() => setIsAdding(!isAdding)}
-            className="bg-ink hover:bg-ink-2 text-white"
-            size="sm"
-          >
-            <Plus className="w-4 h-4 ml-1" />
-            سجّل موقفاً
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setShowForm(true)}>
+            <Plus className="w-4 h-4" /> {T("addEntry")}
           </Button>
         </div>
       </div>
-
-      {/* Add form */}
-      {isAdding && (
-        <Card className="border-gold/30 shadow-md bg-parchment-2">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="font-display text-base">موقف جديد</CardTitle>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsAdding(false)}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Date */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">التاريخ</Label>
-                <Input type="date" value={form.date} onChange={(e) => setField("date", e.target.value)} />
-              </div>
-              {/* What */}
-              <div className="space-y-1.5 lg:col-span-2">
-                <Label className="text-xs font-semibold">ماذا قلت له "لا"؟ *</Label>
-                <Input
-                  value={form.what}
-                  onChange={(e) => setField("what", e.target.value)}
-                  placeholder="مثال: اجتماع غير ضروري في نهاية اليوم"
-                  autoFocus
-                />
-              </div>
-              {/* Source */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">المصدر / المحفز *</Label>
-                <Input
-                  value={form.source}
-                  onChange={(e) => setField("source", e.target.value)}
-                  placeholder="مثال: زميل العمل، نفسي، وسائل التواصل"
-                />
-              </div>
-              {/* Category */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">الفئة</Label>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={form.category}
-                  onChange={(e) => setField("category", e.target.value)}
-                >
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Hours recovered */}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">ساعات مستردّة (اختياري)</Label>
-                <Input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  max="24"
-                  value={form.hoursRecovered}
-                  onChange={(e) => setField("hoursRecovered", e.target.value)}
-                  placeholder="0.5"
-                />
-              </div>
-            </div>
-
-            {/* Outcome pills */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">النتيجة</Label>
-              <div className="flex gap-2">
-                {OUTCOMES.map((o) => (
-                  <button
-                    key={o.value}
-                    onClick={() => setField("outcome", o.value as typeof form.outcome)}
-                    className={`px-4 py-1.5 rounded-lg text-sm font-medium border transition-all ${
-                      form.outcome === o.value
-                        ? o.color + " ring-2 ring-offset-1 ring-current"
-                        : "bg-white border-border text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    {o.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Note */}
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">ملاحظات (اختياري)</Label>
-              <Textarea
-                value={form.note}
-                onChange={(e) => setField("note", e.target.value)}
-                placeholder="كيف شعرت؟ ما الذي ساعدك على الصمود؟ ما الذي تعلمته؟"
-                className="resize-none bg-background text-sm"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setIsAdding(false)}>إلغاء</Button>
-              <Button
-                onClick={handleSave}
-                disabled={!form.what.trim() || !form.source.trim() || createEntry.isPending}
-                className="bg-teal hover:bg-teal/90 text-white"
-              >
-                حفظ السجل
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-48">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            placeholder="بحث في السجل..."
-            className="pr-9 bg-white"
-          />
-        </div>
-        <select
-          className="h-9 rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring min-w-36"
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-        >
-          <option value="">كل الفئات</option>
-          {CATEGORIES.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        <select
-          className="h-9 rounded-md border border-input bg-white px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          value={filterOutcome}
-          onChange={(e) => setFilterOutcome(e.target.value)}
-        >
-          <option value="">كل النتائج</option>
-          {OUTCOMES.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </select>
-        {hasFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-ink"
-            onClick={() => { setSearchText(""); setFilterCategory(""); setFilterOutcome(""); }}
-          >
-            <X className="w-3.5 h-3.5 ml-1" />
-            مسح الفلاتر
-          </Button>
-        )}
-        {hasFilters && (
-          <span className="text-sm text-muted-foreground">
-            {filtered.length} من {entries?.length ?? 0}
-          </span>
-        )}
-      </div>
+      <Card className="border-parchment-2 shadow-sm">
+        <CardContent className="pt-4 pb-3 px-4 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder={T("search")}
+                className="ps-9"
+              />
+            </div>
+            <select
+              value={filterCat}
+              onChange={e => setFilterCat(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="">{T("allCategories")}</option>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <select
+              value={filterOutcome}
+              onChange={e => setFilterOutcome(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground"
+            >
+              <option value="">{T("allOutcomes")}</option>
+              <option value="held">{T("held")}</option>
+              <option value="partial">{T("partial")}</option>
+              <option value="caved">{T("caved")}</option>
+            </select>
+          </div>
 
-      {/* Table */}
-      <div className="bg-card border border-border rounded-xl shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-right">
-            <thead className="bg-muted/50 text-muted-foreground border-b border-border">
-              <tr>
-                <th className="p-4 font-medium">التاريخ</th>
-                <th className="p-4 font-medium">الموضوع</th>
-                <th className="p-4 font-medium">الفئة</th>
-                <th className="p-4 font-medium">المصدر</th>
-                <th className="p-4 font-medium text-center">ساعات</th>
-                <th className="p-4 font-medium text-center">النتيجة</th>
-                <th className="p-4 font-medium w-10"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length > 0 ? (
-                filtered.map((entry) => {
-                  const Icon = getCategoryIcon(entry.category);
-                  const outcomeDetails = OUTCOMES.find((o) => o.value === entry.outcome) ?? OUTCOMES[0];
-                  return (
-                    <tr key={entry.id} className="border-b border-border hover:bg-muted/30 transition-colors group">
-                      <td className="p-4 whitespace-nowrap text-muted-foreground text-xs">
-                        {format(new Date(entry.date + "T12:00:00"), "EEE dd MMM", { locale: ar })}
-                      </td>
-                      <td className="p-4">
-                        <div className="font-medium text-ink">{entry.what}</div>
-                        {entry.note && (
-                          <div className="text-xs text-muted-foreground mt-0.5 line-clamp-1 max-w-xs">
-                            {entry.note}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-1.5 text-muted-foreground">
-                          <Icon className="w-3.5 h-3.5 shrink-0" />
-                          <span className="text-xs">{entry.category}</span>
-                        </div>
-                      </td>
-                      <td className="p-4 text-muted-foreground text-xs">{entry.source}</td>
-                      <td className="p-4 text-center font-display font-semibold text-ink">
-                        {entry.hoursRecovered ? `+${entry.hoursRecovered}` : "—"}
-                      </td>
-                      <td className="p-4 text-center">
-                        <Badge
-                          variant="outline"
-                          className={`${outcomeDetails.color} font-normal px-2 py-0.5 text-xs`}
-                        >
-                          {outcomeDetails.label}
+          <div className="flex flex-wrap gap-2 items-center">
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Filter className="w-4 h-4" />
+              {lang === "ar" ? "من" : "From"}:
+            </div>
+            <Input type="date" value={filterFrom} onChange={e => setFilterFrom(e.target.value)} className="h-8 text-sm w-36" />
+            <span className="text-muted-foreground text-sm">{lang === "ar" ? "إلى" : "To"}:</span>
+            <Input type="date" value={filterTo} onChange={e => setFilterTo(e.target.value)} className="h-8 text-sm w-36" />
+
+            {hasFilters && (
+              <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground gap-1 text-xs h-8">
+                <X className="w-3 h-3" /> {T("clearFilters")}
+              </Button>
+            )}
+
+            <div className="ms-auto flex items-center gap-2">
+              <select
+                value={exportLang}
+                onChange={e => setExportLang(e.target.value as "ar" | "en")}
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs text-foreground"
+              >
+                <option value="ar">عربي</option>
+                <option value="en">English</option>
+              </select>
+              <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5 h-8 text-xs">
+                <Download className="w-3.5 h-3.5" /> {T("exportData")}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bulk delete bar */}
+      <AnimatePresence>
+        {deleteIds.length > 0 && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }}>
+            <div className="flex items-center gap-3 bg-destructive/10 border border-destructive/30 rounded-xl px-4 py-2">
+              <span className="text-sm text-destructive font-medium">
+                {lang === "ar" ? `${deleteIds.length} محددة` : `${deleteIds.length} selected`}
+              </span>
+              <Button variant="destructive" size="sm" onClick={() => deleteMutation.mutate(deleteIds)} disabled={deleteMutation.isPending} className="gap-1">
+                <Trash2 className="w-3.5 h-3.5" /> {lang === "ar" ? "حذف المحددة" : "Delete selected"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setDeleteIds([])}>
+                {T("cancel")}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Entries */}
+      {isLoading ? (
+        <div className="flex justify-center py-16">
+          <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <Card className="border-dashed border-parchment-2 bg-transparent shadow-none">
+          <CardContent className="py-16 text-center">
+            <ShieldBan className="w-10 h-10 text-gold/30 mx-auto mb-3" />
+            <p className="text-muted-foreground font-serif italic">{hasFilters ? T("noResults") : T("noEntries")}</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(entry => (
+            <motion.div key={entry.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <Card className="border-parchment-2 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setEditingEntry(entry); setShowForm(true); }}>
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      className="mt-1 w-4 h-4 accent-gold shrink-0"
+                      checked={deleteIds.includes(entry.id)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setDeleteIds(ids => ids.includes(entry.id) ? ids.filter(i => i !== entry.id) : [...ids, entry.id]);
+                      }}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="font-medium text-ink text-sm truncate">{entry.subject}</span>
+                        <Badge className={`text-xs border ${OUTCOME_COLORS[entry.outcome] ?? ""}`} variant="outline">
+                          {outcomeLabel(entry.outcome, T)}
                         </Badge>
-                      </td>
-                      <td className="p-4">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() =>
-                            deleteEntry.mutate(
-                              { id: entry.id },
-                              { onSuccess: () => queryClient.invalidateQueries({ queryKey: getGetLogEntriesQueryKey() }) }
-                            )
-                          }
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={7} className="p-10 text-center text-muted-foreground">
-                    {hasFilters ? "لا توجد نتائج تطابق الفلتر" : 'لا توجد سجلات بعد — ابدأ بتسجيل أول "لا" لك'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                        {entry.category && <Badge variant="outline" className="text-xs border-parchment-2">{entry.category}</Badge>}
+                        {entry.hoursRecovered && entry.hoursRecovered > 0 && (
+                          <Badge variant="outline" className="text-xs border-teal/30 text-teal">+{entry.hoursRecovered}h</Badge>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                        <span>{format(parseISO(entry.date), "PPP", { locale })}</span>
+                        {entry.source && <span>• {entry.source}</span>}
+                        {entry.notes && <span className="truncate max-w-xs">• {entry.notes}</span>}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit Dialog */}
+      <Dialog open={showForm} onOpenChange={(v) => { if (!v) { setShowForm(false); setEditingEntry(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">{editingEntry?.id ? (lang === "ar" ? "تعديل السجل" : "Edit Entry") : T("newEntry")}</DialogTitle>
+          </DialogHeader>
+
+          <EntryForm
+            initial={editingEntry ?? {}}
+            categories={categories}
+            T={T}
+            lang={lang}
+            onSave={(data) => saveMutation.mutate({ ...editingEntry, ...data })}
+            onDelete={editingEntry?.id ? () => { deleteMutation.mutate([editingEntry.id!]); setShowForm(false); setEditingEntry(null); } : undefined}
+            isSaving={saveMutation.isPending}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function EntryForm({
+  initial, categories, T, lang, onSave, onDelete, isSaving
+}: {
+  initial: Partial<LogEntry>;
+  categories: string[];
+  T: (k: string) => string;
+  lang: string;
+  onSave: (data: Partial<LogEntry>) => void;
+  onDelete?: () => void;
+  isSaving: boolean;
+}) {
+  const today = new Date().toISOString().split("T")[0];
+  const [form, setForm] = useState<Partial<LogEntry>>({
+    date: today,
+    outcome: "held",
+    ...initial,
+  });
+
+  const set = (k: keyof LogEntry, v: unknown) => setForm(f => ({ ...f, [k]: v }));
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">{T("whatSaidNo")} *</label>
+        <Input value={form.subject ?? ""} onChange={e => set("subject", e.target.value)} placeholder={lang === "ar" ? "مثال: اجتماع غير ضروري" : "e.g. Unnecessary meeting"} />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">{T("date")}</label>
+          <Input type="date" value={form.date ?? today} onChange={e => set("date", e.target.value)} />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">{T("outcome")}</label>
+          <select value={form.outcome ?? "held"} onChange={e => set("outcome", e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground">
+            <option value="held">{T("held")}</option>
+            <option value="partial">{T("partial")}</option>
+            <option value="caved">{T("caved")}</option>
+          </select>
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">{T("source")}</label>
+          <Input value={form.source ?? ""} onChange={e => set("source", e.target.value)} placeholder={lang === "ar" ? "مثال: زميل / واتساب" : "e.g. Colleague / WhatsApp"} />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground block mb-1">{T("category")}</label>
+          <select value={form.category ?? ""} onChange={e => set("category", e.target.value)} className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground">
+            <option value="">{lang === "ar" ? "-- اختر --" : "-- Choose --"}</option>
+            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">{T("hoursRecoveredLabel")}</label>
+        <Input type="number" min="0" step="0.5" value={form.hoursRecovered ?? ""} onChange={e => set("hoursRecovered", e.target.value ? parseFloat(e.target.value) : undefined)} />
+      </div>
+      <div>
+        <label className="text-xs text-muted-foreground block mb-1">{T("notes")}</label>
+        <textarea
+          value={form.notes ?? ""}
+          onChange={e => set("notes", e.target.value)}
+          className="w-full h-20 rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground resize-none"
+          placeholder={lang === "ar" ? "ملاحظات إضافية..." : "Additional notes..."}
+        />
+      </div>
+      <DialogFooter className="gap-2 flex-row justify-between pt-2">
+        <div>
+          {onDelete && (
+            <Button variant="destructive" size="sm" onClick={onDelete}>
+              <Trash2 className="w-3.5 h-3.5 ml-1" /> {T("delete")}
+            </Button>
+          )}
+        </div>
+        <Button
+          className="bg-gold hover:bg-gold/90 text-ink font-bold"
+          onClick={() => onSave(form)}
+          disabled={!form.subject?.trim() || isSaving}
+        >
+          {T("save")}
+        </Button>
+      </DialogFooter>
     </div>
   );
 }

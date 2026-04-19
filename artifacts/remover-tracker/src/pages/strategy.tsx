@@ -1,93 +1,100 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useApp } from "@/lib/AppContext";
+import { Lightbulb, Target, Brain, ShieldCheck, Zap } from "lucide-react";
 
 export default function Strategy() {
+  const { lang, T } = useApp();
+
+  const principles = lang === "ar" ? [
+    {
+      icon: Brain,
+      title: "الوعي قبل القرار",
+      desc: "قبل أن تقول نعم لأي شيء، خُذ ثلاث ثوانٍ واسأل نفسك: هل هذا يقودني نحو هدفي أم يبعدني عنه؟"
+    },
+    {
+      icon: Target,
+      title: "حدّد ما لا تريد أولاً",
+      desc: "أغلب الناس يعرفون ما يريدون، لكن القلة فقط تعرف بوضوح ما لا تريد. قائمة المنع أقوى من قائمة الأهداف."
+    },
+    {
+      icon: ShieldCheck,
+      title: "الحدود تحمي الأهداف",
+      desc: "كل 'لا' لشيء غير مهم هي 'نعم' لشيء أهم. الحدود الواضحة تحرر الطاقة والوقت."
+    },
+    {
+      icon: Zap,
+      title: "العادة فوق الإرادة",
+      desc: "لا تعتمد على قوة الإرادة. حوّل إزالاتك الأساسية إلى قواعد تلقائية لا تحتاج قراراً كل مرة."
+    },
+  ] : [
+    {
+      icon: Brain,
+      title: "Awareness Before Decision",
+      desc: "Before saying yes to anything, take three seconds and ask yourself: Does this move me toward my goal or away from it?"
+    },
+    {
+      icon: Target,
+      title: "Define What You Don't Want First",
+      desc: "Most people know what they want, but few clearly know what they don't want. A ban list is more powerful than a goals list."
+    },
+    {
+      icon: ShieldCheck,
+      title: "Boundaries Protect Goals",
+      desc: "Every 'No' to something unimportant is a 'Yes' to something more important. Clear boundaries free up energy and time."
+    },
+    {
+      icon: Zap,
+      title: "Habit Over Willpower",
+      desc: "Don't rely on willpower. Turn your key removals into automatic rules that don't require a decision each time."
+    },
+  ];
+
   return (
-    <div className="space-y-8 max-w-3xl mx-auto pb-12">
+    <div className="space-y-8 max-w-4xl mx-auto">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-display font-bold text-ink mb-4">استراتيجية الإزالة</h2>
-        <p className="text-lg text-muted-foreground font-serif max-w-2xl mx-auto">
-          الإنتاجية ليست في فعل المزيد، بل في التخلص من غير الضروري بلا رحمة.
+        <div className="w-16 h-16 rounded-2xl bg-gold/10 flex items-center justify-center mx-auto mb-4">
+          <Lightbulb className="w-8 h-8 text-gold" />
+        </div>
+        <h2 className="text-4xl font-display font-bold text-ink">
+          {lang === "ar" ? "استراتيجية الإزالة" : "Removal Strategy"}
+        </h2>
+        <p className="text-lg text-muted-foreground mt-2 font-serif italic">
+          {lang === "ar" ? "المبادئ التي تجعل قوة اللا فعّالة" : "Principles that make the power of No effective"}
         </p>
       </div>
 
-      <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-coral before:via-gold before:to-sage">
-        
-        <LayerCard 
-          number="1"
-          color="bg-coral"
-          textColor="text-coral"
-          title="الوضوح"
-          desc="اعرف ما لا تفعله قبل أن تبدأ يومك"
-          details="قرارات اللحظة الأخيرة تستهلك طاقة الإرادة. حدد الممنوعات مسبقاً في خطة اليوم."
-        />
-
-        <LayerCard 
-          number="2"
-          color="bg-gold"
-          textColor="text-gold-deep"
-          title="الاستبدال"
-          desc="كل 'لا' يحتاج 'نعم' أخرى تملأ الفراغ"
-          details="الطبيعة تكره الفراغ. إذا منعت نفسك من تصفح الجوال، فماذا ستفعل بدلاً من ذلك؟ ضع كتاباً أو كوب ماء."
-        />
-
-        <LayerCard 
-          number="3"
-          color="bg-teal"
-          textColor="text-teal"
-          title="التخطيط المُسبق"
-          desc="خطط لمحفّزاتك بـ'إذا... فإنّي...'"
-          details="لا تعتمد على قوة الإرادة وقت الضعف. ضع خطة واضحة لما ستفعله عندما يضربك المحفز."
-        />
-
-        <LayerCard 
-          number="4"
-          color="bg-sage"
-          textColor="text-sage"
-          title="المراجعة"
-          desc="راجع أسبوعيًّا وعدّل قائمتك"
-          details="قائمة الممنوعات تتطور معك. ما كان مغرياً بالأمس قد لا يكون كذلك اليوم."
-        />
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {principles.map((p, i) => (
+          <Card key={i} className="border-gold/20 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center">
+                  <p.icon className="w-5 h-5 text-gold" />
+                </div>
+                <CardTitle className="font-display text-base">{p.title}</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground leading-relaxed">{p.desc}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      <div className="mt-16 bg-parchment-2 border border-border p-8 rounded-xl shadow-sm">
-        <h3 className="font-display text-2xl font-bold text-ink mb-6 text-center">أسئلة الفلترة السريعة</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[
-            "هل هذا يخدمني أم يخدم أجندة شخص آخر؟",
-            "هل سأندم على هذا الوقت غداً؟",
-            "هل أقول نعم بدافع الحرج؟",
-            "هل هذا النشاط يغذي طاقتي أم يمتصها؟"
-          ].map((q, i) => (
-            <div key={i} className="flex items-start gap-3 bg-white p-4 rounded-lg">
-              <CheckCircle2 className="w-5 h-5 text-gold mt-0.5 shrink-0" />
-              <p className="font-medium text-ink-2">{q}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function LayerCard({ number, color, textColor, title, desc, details }: { number: string, color: string, textColor: string, title: string, desc: string, details: string }) {
-  return (
-    <div className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-      {/* Icon */}
-      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-background ${color} text-white font-bold font-display shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 absolute right-0 md:left-1/2 md:right-auto transform translate-x-1/2`}>
-        {number}
-      </div>
-      
-      {/* Card */}
-      <Card className="w-[calc(100%-3rem)] md:w-[calc(50%-2.5rem)] shadow-sm hover:shadow-md transition-all mr-12 md:mr-0 border-border relative overflow-hidden">
-        <div className={`absolute top-0 right-0 w-1 h-full ${color}`} />
-        <CardContent className="p-6">
-          <h4 className={`font-display text-xl font-bold mb-2 ${textColor}`}>{title}</h4>
-          <p className="font-medium text-ink mb-2">{desc}</p>
-          <p className="text-sm text-muted-foreground leading-relaxed">{details}</p>
+      {/* Quote */}
+      <Card className="border-gold/30 bg-gold/5 shadow-none">
+        <CardContent className="py-8 text-center">
+          <p className="text-xl font-serif italic text-ink-2 leading-relaxed max-w-2xl mx-auto">
+            {lang === "ar"
+              ? '"ما لا تفعله يحدد ما يمكنك فعله. كل \"لا\" صغيرة هي \"نعم\" كبيرة لشيء أهم."'
+              : '"What you don\'t do defines what you can do. Every small \'No\' is a big \'Yes\' to something more important."'}
+          </p>
         </CardContent>
       </Card>
+
+      <div className="text-center text-xs text-muted-foreground pt-8 border-t border-parchment-2">
+        {T("copyright")}
+      </div>
     </div>
   );
 }

@@ -72,4 +72,9 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
   },
+  define: {
+    // Expose VITE_-prefixed env vars from process.env to the client bundle
+    "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify(process.env.VITE_CLERK_PUBLISHABLE_KEY ?? ""),
+    "import.meta.env.VITE_CLERK_PROXY_URL": JSON.stringify(process.env.VITE_CLERK_PROXY_URL ?? ""),
+  },
 });
