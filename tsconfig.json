@@ -9,14 +9,11 @@
   "files": [],
   "references": [
     {
-      "path": "./lib/db"
-    },
-    {
       "path": "./lib/api-client-react"
     },
     {
       "path": "./lib/api-zod"
     }
   ],
-  "exclude": ["artifacts/api-server"]
+  "exclude": ["artifacts/api-server", "lib/db"]
 }
