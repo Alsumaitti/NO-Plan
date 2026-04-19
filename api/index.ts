@@ -1,7 +1,7 @@
-// Vercel serverless entrypoint — mounts the Express app behind /api/*.
-// Catch-all rewrite in vercel.json sends every /api/* request here, and Express
-// router handles dispatch based on app.use("/api", router).
-import app from "../artifacts/api-server/src/app";
+// Vercel serverless entrypoint — exports Express app directly.
+// The api-server is built as a workspace package, and we import the app
+// (not the server startup code).
+import app from "../artifacts/api-server/src/vercel";
 
 export default app;
 

@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "corepack enable && corepack prepare pnpm@9 --activate && pnpm install --frozen-lockfile=false",
-  "buildCommand": "pnpm -C artifacts/remover-tracker build",
+  "buildCommand": "node api/build.mjs && pnpm -C artifacts/remover-tracker build",
   "outputDirectory": "artifacts/remover-tracker/dist/public",
   "framework": null,
   "functions": {

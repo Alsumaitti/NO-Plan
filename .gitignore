@@ -50,3 +50,6 @@ Thumbs.db
 
 .vercel
 .env*.local
+
+# Built API function
+api/index.js
