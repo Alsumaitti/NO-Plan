@@ -6,13 +6,17 @@ const { Pool } = pg;
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
-if (!DATABASE_URL && typeof process !== "undefined" && process.env.NODE_ENV === "production") {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+let pool: pg.Pool;
+let db: any;
+
+if (DATABASE_URL) {
+  pool = new Pool({ connectionString: DATABASE_URL });
+  db = drizzle(pool, { schema });
+} else {
+  // Provide dummy exports during build
+  pool = null as any;
+  db = null as any;
 }
 
-export const pool = new Pool({ connectionString: DATABASE_URL || "" });
-export const db = drizzle(pool, { schema });
-
+export { pool, db };
 export * from "./schema";
