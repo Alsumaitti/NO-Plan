@@ -59238,7 +59238,7 @@ var init_src = __esm({
   }
 });
 
-// artifacts/api-server/src/app.ts
+// artifacts/api-server/_src/app.ts
 var import_express12 = __toESM(require_express2(), 1);
 var import_cors = __toESM(require_lib3(), 1);
 var import_pino_http = __toESM(require_logger(), 1);
@@ -67331,7 +67331,7 @@ var getAuth = ((req, options) => {
   return getAuthObjectForAcceptedToken({ authObject, acceptsToken: options?.acceptsToken });
 });
 
-// artifacts/api-server/src/middlewares/clerkProxyMiddleware.ts
+// artifacts/api-server/_src/middlewares/clerkProxyMiddleware.ts
 var import_http_proxy_middleware = __toESM(require_dist3(), 1);
 var CLERK_FAPI = "https://frontend-api.clerk.dev";
 var CLERK_PROXY_PATH = "/api/__clerk";
@@ -67364,10 +67364,10 @@ function clerkProxyMiddleware() {
   });
 }
 
-// artifacts/api-server/src/routes/index.ts
+// artifacts/api-server/_src/routes/index.ts
 var import_express11 = __toESM(require_express2(), 1);
 
-// artifacts/api-server/src/routes/health.ts
+// artifacts/api-server/_src/routes/health.ts
 var import_express = __toESM(require_express2(), 1);
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/util.js
@@ -71416,7 +71416,7 @@ var GetDashboardByCategoryResponse = arrayType(
   GetDashboardByCategoryResponseItem
 );
 
-// artifacts/api-server/src/routes/health.ts
+// artifacts/api-server/_src/routes/health.ts
 var router = (0, import_express.Router)();
 router.get("/healthz", (_req, res) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
@@ -71424,12 +71424,12 @@ router.get("/healthz", (_req, res) => {
 });
 var health_default = router;
 
-// artifacts/api-server/src/routes/logEntries.ts
+// artifacts/api-server/_src/routes/logEntries.ts
 var import_express3 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 
-// artifacts/api-server/src/lib/serialize.ts
+// artifacts/api-server/_src/lib/serialize.ts
 function serializeRow(row) {
   const result = {};
   for (const [key, value] of Object.entries(row)) {
@@ -71441,7 +71441,7 @@ function serializeRows(rows) {
   return rows.map(serializeRow);
 }
 
-// artifacts/api-server/src/middlewares/requireAuth.ts
+// artifacts/api-server/_src/middlewares/requireAuth.ts
 function requireAuth(req, res, next) {
   const auth = getAuth(req);
   const userId = auth?.userId;
@@ -71453,7 +71453,7 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// artifacts/api-server/src/routes/logEntries.ts
+// artifacts/api-server/_src/routes/logEntries.ts
 var router2 = (0, import_express3.Router)();
 router2.get("/log-entries", requireAuth, async (req, res) => {
   const userId = req.userId;
@@ -71512,7 +71512,7 @@ router2.delete("/log-entries", requireAuth, async (req, res) => {
 });
 var logEntries_default = router2;
 
-// artifacts/api-server/src/routes/dailyItems.ts
+// artifacts/api-server/_src/routes/dailyItems.ts
 var import_express4 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -71592,7 +71592,7 @@ router3.post("/daily-items/archive", requireAuth, async (req, res) => {
 });
 var dailyItems_default = router3;
 
-// artifacts/api-server/src/routes/masterRules.ts
+// artifacts/api-server/_src/routes/masterRules.ts
 var import_express5 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -71629,7 +71629,7 @@ router4.delete("/master-rules", requireAuth, async (req, res) => {
 });
 var masterRules_default = router4;
 
-// artifacts/api-server/src/routes/priorities.ts
+// artifacts/api-server/_src/routes/priorities.ts
 var import_express6 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -71650,7 +71650,7 @@ router5.put("/priorities", requireAuth, async (req, res) => {
 });
 var priorities_default = router5;
 
-// artifacts/api-server/src/routes/ifThenPlans.ts
+// artifacts/api-server/_src/routes/ifThenPlans.ts
 var import_express7 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -71683,7 +71683,7 @@ router6.delete("/if-then/:id", requireAuth, async (req, res) => {
 });
 var ifThenPlans_default = router6;
 
-// artifacts/api-server/src/routes/dashboard.ts
+// artifacts/api-server/_src/routes/dashboard.ts
 var import_express8 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -71808,7 +71808,7 @@ router7.get("/dashboard/by-category", requireAuth, async (req, res) => {
 });
 var dashboard_default = router7;
 
-// artifacts/api-server/src/routes/export.ts
+// artifacts/api-server/_src/routes/export.ts
 var import_express9 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -71937,7 +71937,7 @@ router8.get("/export", requireAuth, async (req, res) => {
 });
 var export_default = router8;
 
-// artifacts/api-server/src/routes/userSettings.ts
+// artifacts/api-server/_src/routes/userSettings.ts
 var import_express10 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
@@ -72026,7 +72026,7 @@ router9.delete("/account-data", requireAuth, async (req, res) => {
 });
 var userSettings_default = router9;
 
-// artifacts/api-server/src/routes/index.ts
+// artifacts/api-server/_src/routes/index.ts
 var router10 = (0, import_express11.Router)();
 router10.use(health_default);
 router10.use(logEntries_default);
@@ -72039,7 +72039,7 @@ router10.use(export_default);
 router10.use(userSettings_default);
 var routes_default = router10;
 
-// artifacts/api-server/src/lib/logger.ts
+// artifacts/api-server/_src/lib/logger.ts
 var import_pino = __toESM(require_pino(), 1);
 var isProduction = process.env.NODE_ENV === "production";
 var logger = (0, import_pino.default)({
@@ -72057,7 +72057,7 @@ var logger = (0, import_pino.default)({
   }
 });
 
-// artifacts/api-server/src/app.ts
+// artifacts/api-server/_src/app.ts
 var app = (0, import_express12.default)();
 app.use(
   (0, import_pino_http.default)({

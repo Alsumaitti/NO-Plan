@@ -2,7 +2,7 @@
 // Bundled by api/build.mjs into api/index.js; Vercel's @vercel/node runtime
 // calls the default export as a (req, res) handler.
 
-import app from "../artifacts/api-server/src/app";
+import app from "../artifacts/api-server/_src/app";
 
 export default app;
 
