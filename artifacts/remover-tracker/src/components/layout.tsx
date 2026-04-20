@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import {
   LayoutDashboard, CalendarDays, ListTodo, ShieldBan, RefreshCcw,
-  Lightbulb, Settings, LogOut, Sun, Moon, Globe, Flame, ChevronDown, Star
+  Lightbulb, Settings, LogOut, Sun, Moon, Globe, Flame, ChevronDown, Star, ScrollText
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/AppContext";
@@ -18,7 +18,7 @@ function useNavItems(T: (k: string) => string, lang: string) {
     { href: "/", label: T("dashboard"), icon: LayoutDashboard },
     { href: "/daily", label: T("dailyPlan"), icon: CalendarDays },
     { href: "/prayer", label: lang === "ar" ? "الفرض الجاي" : "Next Prayer", icon: Star },
-    { href: "/tracker", label: T("log"), icon: ListTodo },
+    { href: "/logs", label: lang === "ar" ? "السجلات" : "Logs", icon: ScrollText },
     { href: "/master", label: T("masterRules"), icon: ShieldBan },
     { href: "/review", label: T("review"), icon: RefreshCcw },
     { href: "/strategy", label: T("strategy"), icon: Lightbulb },

@@ -1,9 +1,11 @@
 // Builds a multi-sheet XLSX workbook from server + localStorage data.
 // Sheets:
-//   1. Plans — combined daily bans, priorities, if-then, and archived log entries
+//   1. Removals — daily bans + log entries (excluding prayer/review-tagged)
 //   2. Prayer Law — localStorage prayer plans (+ log entries tagged Prayer Law)
-//   3. Weekly Review — localStorage reflections (+ log entries tagged Weekly Review)
-//   4. Permanent Ban List — master rules
+//   3. Triggers — if-then plans
+//   4. Priorities — daily priority slots
+//   5. Weekly Review — localStorage reflections (+ log entries tagged Weekly Review)
+//   6. Permanent Ban List — master rules
 import * as XLSX from "xlsx";
 import type { AuthFetch } from "./apiClient";
 
@@ -15,6 +17,9 @@ type Lang = "ar" | "en";
 const L = {
   ar: {
     plans: "الخطط",
+    removals: "الإزالات",
+    triggers: "المحفزات",
+    priorities: "الأولويات",
     prayer: "قانون الفرض الجاي",
     review: "المراجعة الأسبوعية",
     bans: "قائمة المنع الدائمة",
@@ -51,6 +56,9 @@ const L = {
   },
   en: {
     plans: "Plans",
+    removals: "Removals",
+    triggers: "Triggers",
+    priorities: "Priorities",
     prayer: "Next Prayer Law",
     review: "Weekly Review",
     bans: "Permanent Ban List",
@@ -168,12 +176,19 @@ export async function exportWorkbook(authFetch: AuthFetch, lang: Lang) {
   const masterRules: any[] = Array.isArray(masterRes) ? masterRes : [];
   const ifThenPlans: any[] = Array.isArray(ifThenRes) ? ifThenRes : [];
 
-  // ===== Sheet 1: Plans (combined) =====
-  const plansRows: Record<string, any>[] = [];
+  // Helpers: identify specialized tagged entries (excluded from Removals)
+  const isPrayer = (e: any) =>
+    e?.category === "قانون الفرض الجاي" || e?.category === "Next Prayer Law" ||
+    e?.source === "قانون الفرض الجاي" || e?.source === "Next Prayer Law";
+  const isReview = (e: any) =>
+    e?.category === "مراجعة أسبوعية" || e?.category === "Weekly Review" ||
+    e?.source === "مراجعة أسبوعية" || e?.source === "Weekly Review";
 
-  // Daily bans
+  // ===== Sheet 1: Removals (log entries + daily bans, minus specialized tags) =====
+  const removalsRows: Record<string, any>[] = [];
+
   for (const item of dailyItems) {
-    plansRows.push({
+    removalsRows.push({
       [t.type]: t.dailyBan,
       [t.date]: item.date ?? "",
       [t.what]: item.what ?? "",
@@ -188,58 +203,10 @@ export async function exportWorkbook(authFetch: AuthFetch, lang: Lang) {
     });
   }
 
-  // Priorities (flatten — one row per priority slot per date)
-  for (const p of priorities) {
-    const arr: string[] = Array.isArray(p?.priorities)
-      ? p.priorities
-      : [p?.priority1, p?.priority2, p?.priority3].filter((v: any) => typeof v === "string");
-    arr.forEach((val, i) => {
-      if (!val || !val.trim()) return;
-      plansRows.push({
-        [t.type]: `${t.priorityT} ${i + 1}`,
-        [t.date]: p.date ?? "",
-        [t.what]: val,
-        [t.category]: "",
-        [t.source]: "",
-        [t.riskLevel]: "",
-        [t.replacement]: "",
-        [t.done]: "",
-        [t.hoursRecovered]: "",
-        [t.outcome]: "",
-        [t.note]: "",
-      });
-    });
-  }
-
-  // If-then
-  for (const plan of ifThenPlans) {
-    plansRows.push({
-      [t.type]: t.ifThen,
-      [t.date]: plan.date ?? "",
-      [t.what]: `${t.ifCondition}: ${plan.ifCondition ?? ""} → ${t.thenAction}: ${plan.thenAction ?? ""}`,
-      [t.category]: "",
-      [t.source]: "",
-      [t.riskLevel]: "",
-      [t.replacement]: "",
-      [t.done]: "",
-      [t.hoursRecovered]: "",
-      [t.outcome]: "",
-      [t.note]: "",
-    });
-  }
-
-  // Log entries — skip prayer-law and review entries (they go to their own sheets)
-  const isPrayer = (e: any) =>
-    e?.category === "قانون الفرض الجاي" || e?.category === "Next Prayer Law" ||
-    e?.source === "قانون الفرض الجاي" || e?.source === "Next Prayer Law";
-  const isReview = (e: any) =>
-    e?.category === "مراجعة أسبوعية" || e?.category === "Weekly Review" ||
-    e?.source === "مراجعة أسبوعية" || e?.source === "Weekly Review";
-
   for (const e of logEntries) {
     if (isPrayer(e) || isReview(e)) continue;
     const outcome = e.outcome && (t as any)[e.outcome] ? (t as any)[e.outcome] : (e.outcome ?? "");
-    plansRows.push({
+    removalsRows.push({
       [t.type]: t.logEntry,
       [t.date]: e.date ?? "",
       [t.what]: e.what ?? "",
@@ -253,9 +220,33 @@ export async function exportWorkbook(authFetch: AuthFetch, lang: Lang) {
       [t.note]: e.note ?? "",
     });
   }
+  removalsRows.sort((a, b) => String(b[t.date] ?? "").localeCompare(String(a[t.date] ?? "")));
 
-  // Sort plans by date descending
-  plansRows.sort((a, b) => String(b[t.date] ?? "").localeCompare(String(a[t.date] ?? "")));
+  // ===== Sheet 2: Triggers (if-then plans) — own sheet =====
+  const triggersRows: Record<string, any>[] = ifThenPlans.map(plan => ({
+    [t.date]: plan.date ?? plan.createdAt ?? "",
+    [t.ifCondition]: plan.ifCondition ?? plan.trigger ?? "",
+    [t.thenAction]: plan.thenAction ?? plan.response ?? "",
+    [t.category]: plan.category ?? "",
+  }));
+  triggersRows.sort((a, b) => String(b[t.date] ?? "").localeCompare(String(a[t.date] ?? "")));
+
+  // ===== Sheet 3: Priorities (one row per slot per date) — own sheet =====
+  const prioritiesRows: Record<string, any>[] = [];
+  for (const p of priorities) {
+    const arr: string[] = Array.isArray(p?.priorities)
+      ? p.priorities
+      : [p?.priority1, p?.priority2, p?.priority3].filter((v: any) => typeof v === "string");
+    arr.forEach((val, i) => {
+      if (!val || !val.trim()) return;
+      prioritiesRows.push({
+        [t.date]: p.date ?? "",
+        [t.rank]: i + 1,
+        [t.value]: val,
+      });
+    });
+  }
+  prioritiesRows.sort((a, b) => String(b[t.date] ?? "").localeCompare(String(a[t.date] ?? "")));
 
   // ===== Sheet 2: Prayer Law =====
   const prayerRows: Record<string, any>[] = [];
@@ -342,13 +333,23 @@ export async function exportWorkbook(authFetch: AuthFetch, lang: Lang) {
 
   XLSXUtils.book_append_sheet(
     wb,
-    mkSheet(plansRows, [t.type, t.date, t.what, t.category, t.source, t.riskLevel, t.replacement, t.done, t.hoursRecovered, t.outcome, t.note]),
-    t.plans.slice(0, 31),
+    mkSheet(removalsRows, [t.type, t.date, t.what, t.category, t.source, t.riskLevel, t.replacement, t.done, t.hoursRecovered, t.outcome, t.note]),
+    t.removals.slice(0, 31),
   );
   XLSXUtils.book_append_sheet(
     wb,
     mkSheet(prayerRows, [t.date, t.interval, t.rank, t.value]),
     t.prayer.slice(0, 31),
+  );
+  XLSXUtils.book_append_sheet(
+    wb,
+    mkSheet(triggersRows, [t.date, t.ifCondition, t.thenAction, t.category]),
+    t.triggers.slice(0, 31),
+  );
+  XLSXUtils.book_append_sheet(
+    wb,
+    mkSheet(prioritiesRows, [t.date, t.rank, t.value]),
+    t.priorities.slice(0, 31),
   );
   XLSXUtils.book_append_sheet(
     wb,

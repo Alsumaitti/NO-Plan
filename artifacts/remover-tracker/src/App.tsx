@@ -17,6 +17,12 @@ import Strategy from "@/pages/strategy";
 import Settings from "@/pages/settings";
 import Onboarding from "@/pages/onboarding";
 import Landing from "@/pages/landing";
+import LogsHub from "@/pages/logs-hub";
+import LogsPrayer from "@/pages/logs-prayer";
+import LogsTriggers from "@/pages/logs-triggers";
+import LogsPriorities from "@/pages/logs-priorities";
+import LogsBans from "@/pages/logs-bans";
+import LogsReview from "@/pages/logs-review";
 
 const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 const clerkProxyUrl = (import.meta.env.VITE_CLERK_PROXY_URL as string | undefined) || undefined;
@@ -148,6 +154,13 @@ function AppContent() {
         <Route path="/daily" component={DailyPlan} />
         <Route path="/prayer" component={PrayerLaw} />
         <Route path="/tracker" component={Tracker} />
+        <Route path="/logs" component={LogsHub} />
+        <Route path="/logs/removals" component={Tracker} />
+        <Route path="/logs/prayer" component={LogsPrayer} />
+        <Route path="/logs/triggers" component={LogsTriggers} />
+        <Route path="/logs/priorities" component={LogsPriorities} />
+        <Route path="/logs/bans" component={LogsBans} />
+        <Route path="/logs/review" component={LogsReview} />
         <Route path="/master" component={MasterRules} />
         <Route path="/review" component={Review} />
         <Route path="/strategy" component={Strategy} />
