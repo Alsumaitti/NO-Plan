@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useApp } from "@/lib/AppContext";
 import { useAuthFetch } from "@/lib/apiClient";
+import { exportWorkbook } from "@/lib/exportWorkbook";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
@@ -113,22 +114,17 @@ export default function Tracker() {
     setFilterCat(""); setFilterOutcome(""); setFilterFrom(""); setFilterTo(""); setSearchTerm("");
   };
 
+  const [exporting, setExporting] = useState(false);
   const handleExport = async () => {
-    const params = new URLSearchParams();
-    if (filterFrom) params.set("from", filterFrom);
-    if (filterTo) params.set("to", filterTo);
-    if (filterCat) params.set("category", filterCat);
-    if (filterOutcome) params.set("outcome", filterOutcome);
-    params.set("lang", exportLang);
-    const r = await authFetch(`/api/export?${params}`);
-    if (!r.ok) return;
-    const blob = await r.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `no-log-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      setExporting(true);
+      await exportWorkbook(authFetch, exportLang);
+    } catch (err) {
+      console.error("Export failed:", err);
+      alert(lang === "ar" ? "تعذّر التصدير" : "Export failed");
+    } finally {
+      setExporting(false);
+    }
   };
 
   const form = editingEntry ?? {};
@@ -205,8 +201,8 @@ export default function Tracker() {
                 <option value="ar">عربي</option>
                 <option value="en">English</option>
               </select>
-              <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5 h-8 text-xs">
-                <Download className="w-3.5 h-3.5" /> {T("exportData")}
+              <Button variant="outline" size="sm" onClick={handleExport} disabled={exporting} className="gap-1.5 h-8 text-xs">
+                <Download className="w-3.5 h-3.5" /> {exporting ? (lang === "ar" ? "جاري..." : "Exporting...") : `${T("exportData")} (XLSX)`}
               </Button>
             </div>
           </div>

@@ -1,9 +1,22 @@
 import { Router, type IRouter } from "express";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db, prioritiesTable } from "@workspace/db";
 import { requireAuth } from "../middlewares/requireAuth";
 
 const router: IRouter = Router();
+
+// GET /priorities/all — all priorities for export
+router.get("/priorities/all", requireAuth, async (req, res): Promise<void> => {
+  const rows = await db
+    .select()
+    .from(prioritiesTable)
+    .where(eq(prioritiesTable.userId, req.userId))
+    .orderBy(desc(prioritiesTable.date));
+  res.json(rows.map(r => ({
+    date: r.date,
+    priorities: [r.priority1, r.priority2, r.priority3].filter((p): p is string => !!p),
+  })));
+});
 
 // GET /priorities?date=yyyy-MM-dd  → { priorities: string[] }
 router.get("/priorities", requireAuth, async (req, res): Promise<void> => {

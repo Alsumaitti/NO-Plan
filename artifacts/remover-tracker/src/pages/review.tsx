@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { format, subDays, startOfWeek as dfStartOfWeek } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { useApp } from "@/lib/AppContext";
-import { RefreshCcw, Check } from "lucide-react";
+import { useAuthFetch } from "@/lib/apiClient";
+import { RefreshCcw, Check, Archive as ArchiveIcon, Loader2 } from "lucide-react";
 
 export default function Review() {
   const { lang, T } = useApp();
+  const qc = useQueryClient();
+  const authFetch = useAuthFetch();
   const locale = lang === "ar" ? arSA : enUS;
   const today = new Date();
   const weekStart = dfStartOfWeek(today, { weekStartsOn: 6 }); // Saturday
@@ -56,6 +61,73 @@ export default function Review() {
 
   const filledCount = answers.filter(a => a.trim()).length;
 
+  // Archive reflections to log as a single entry
+  const archiveMut = useMutation({
+    mutationFn: async () => {
+      const filled = answers
+        .map((a, i) => ({ q: prompts[i], a: a.trim() }))
+        .filter(x => x.a);
+      if (filled.length === 0) throw new Error("empty");
+      const note = filled.map((x, i) => `${i + 1}. ${x.q}\n→ ${x.a}`).join("\n\n");
+      const r = await authFetch("/api/log-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: format(new Date(), "yyyy-MM-dd"),
+          what: lang === "ar" ? `مراجعة أسبوعية: ${weekRange}` : `Weekly Review: ${weekRange}`,
+          source: lang === "ar" ? "مراجعة أسبوعية" : "Weekly Review",
+          category: lang === "ar" ? "مراجعة أسبوعية" : "Weekly Review",
+          outcome: "Held",
+          note,
+        }),
+      });
+      if (!r.ok) throw new Error(`${r.status}`);
+      return r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["log-entries"] });
+      qc.invalidateQueries({ queryKey: ["dashboard-stats"] });
+    },
+  });
+
+  // Auto-archive detection: if it's a new week and the previous week had reflections,
+  // automatically archive the previous week once.
+  useEffect(() => {
+    const flagKey = `no-review-autoarchived-${weekKey}`;
+    if (localStorage.getItem(flagKey)) return;
+    // Look for a prior week in localStorage
+    try {
+      const keys = Object.keys(localStorage).filter(k => k.startsWith("no-review-") && !k.includes("autoarchived"));
+      const prior = keys
+        .map(k => k.replace("no-review-", ""))
+        .filter(k => k !== weekKey)
+        .sort()
+        .reverse()[0];
+      if (!prior) return;
+      const priorRaw = localStorage.getItem(`no-review-${prior}`);
+      if (!priorRaw) return;
+      const priorArr = JSON.parse(priorRaw);
+      if (!Array.isArray(priorArr) || !priorArr.some((a: string) => a?.trim())) return;
+      const priorFilled = priorArr.map((a: string, i: number) => ({ q: prompts[i], a: (a ?? "").trim() })).filter(x => x.a);
+      if (priorFilled.length === 0) return;
+      const note = priorFilled.map((x, i) => `${i + 1}. ${x.q}\n→ ${x.a}`).join("\n\n");
+      authFetch("/api/log-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: prior,
+          what: lang === "ar" ? `مراجعة أسبوعية مُرحَّلة تلقائياً` : `Auto-archived Weekly Review`,
+          source: lang === "ar" ? "مراجعة أسبوعية" : "Weekly Review",
+          category: lang === "ar" ? "مراجعة أسبوعية" : "Weekly Review",
+          outcome: "Held",
+          note,
+        }),
+      }).then(r => {
+        if (r.ok) localStorage.setItem(flagKey, "1");
+      }).catch(() => { /* silent */ });
+    } catch { /* silent */ }
+  }, [weekKey, lang]);
+
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <div className="text-center space-y-4 mb-12">
@@ -81,6 +153,27 @@ export default function Review() {
               <Check className="w-3 h-3 text-green-600" />
               {lang === "ar" ? "محفوظ تلقائيًا" : "auto-saved"}
             </div>
+          )}
+        </div>
+
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => archiveMut.mutate()}
+            disabled={archiveMut.isPending || filledCount === 0}
+            className="h-9 gap-1.5 border-gold/40 text-gold-deep hover:bg-gold/10"
+          >
+            {archiveMut.isPending
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <ArchiveIcon className="w-3.5 h-3.5" />}
+            {lang === "ar" ? "رحِّل المراجعة إلى السجل" : "Archive review to log"}
+          </Button>
+          {archiveMut.isSuccess && (
+            <span className="ms-2 inline-flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+              <Check className="w-3 h-3" />
+              {lang === "ar" ? "رُحِّل" : "Archived"}
+            </span>
           )}
         </div>
       </div>

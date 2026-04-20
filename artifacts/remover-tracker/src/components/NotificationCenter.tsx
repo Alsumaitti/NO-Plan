@@ -170,7 +170,8 @@ export function NotificationCenter() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.15 }}
-            className={`absolute ${isRTL ? "left-0" : "right-0"} top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50`}
+            style={{ width: "min(340px, calc(100vw - 24px))" }}
+            className={`fixed sm:absolute ${isRTL ? "left-3 sm:left-0" : "right-3 sm:right-0"} top-14 sm:top-full sm:mt-2 bg-card border border-border rounded-xl shadow-xl overflow-hidden z-[60]`}
           >
             <div className="px-4 py-3 border-b border-border flex items-center justify-between">
               <p className="text-sm font-semibold text-foreground">
@@ -193,14 +194,14 @@ export function NotificationCenter() {
                       <Link href={n.href}>
                         <button
                           onClick={() => setOpen(false)}
-                          className="w-full flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-start"
+                          className="w-full flex items-start gap-3 px-3 py-3 hover:bg-muted/50 transition-colors text-start"
                         >
                           <div className={`w-8 h-8 rounded-full ${toneClass(n.tone)} flex items-center justify-center shrink-0`}>
                             <n.icon className="w-4 h-4" />
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">{n.title}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.body}</p>
+                          <div className="flex-1 min-w-0 break-words">
+                            <p className="text-sm font-semibold text-foreground leading-snug">{n.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1 leading-snug">{n.body}</p>
                           </div>
                         </button>
                       </Link>

@@ -73,6 +73,16 @@ router.delete("/daily-items/:id", requireAuth, async (req, res): Promise<void> =
   res.sendStatus(204);
 });
 
+// GET /daily-items/all — all items for export
+router.get("/daily-items/all", requireAuth, async (req, res): Promise<void> => {
+  const items = await db
+    .select()
+    .from(dailyItemsTable)
+    .where(eq(dailyItemsTable.userId, req.userId))
+    .orderBy(desc(dailyItemsTable.date));
+  res.json(serializeRows(items));
+});
+
 // GET /daily-items/past-dates
 router.get("/daily-items/past-dates", requireAuth, async (req, res): Promise<void> => {
   const today = new Date().toISOString().split("T")[0];

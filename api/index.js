@@ -71584,6 +71584,10 @@ router3.delete("/daily-items/:id", requireAuth, async (req, res) => {
   }
   res.sendStatus(204);
 });
+router3.get("/daily-items/all", requireAuth, async (req, res) => {
+  const items = await db.select().from(dailyItemsTable).where(eq(dailyItemsTable.userId, req.userId)).orderBy(desc(dailyItemsTable.date));
+  res.json(serializeRows(items));
+});
 router3.get("/daily-items/past-dates", requireAuth, async (req, res) => {
   const today = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
   const rows = await db.selectDistinct({ date: dailyItemsTable.date }).from(dailyItemsTable).where(and(eq(dailyItemsTable.userId, req.userId), lt(dailyItemsTable.date, today)));
@@ -71656,6 +71660,13 @@ var import_express6 = __toESM(require_express2(), 1);
 init_drizzle_orm();
 init_src();
 var router5 = (0, import_express6.Router)();
+router5.get("/priorities/all", requireAuth, async (req, res) => {
+  const rows = await db.select().from(prioritiesTable).where(eq(prioritiesTable.userId, req.userId)).orderBy(desc(prioritiesTable.date));
+  res.json(rows.map((r) => ({
+    date: r.date,
+    priorities: [r.priority1, r.priority2, r.priority3].filter((p) => !!p)
+  })));
+});
 router5.get("/priorities", requireAuth, async (req, res) => {
   const date6 = typeof req.query.date === "string" ? req.query.date : (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
   const [row] = await db.select().from(prioritiesTable).where(and(eq(prioritiesTable.userId, req.userId), eq(prioritiesTable.date, date6)));

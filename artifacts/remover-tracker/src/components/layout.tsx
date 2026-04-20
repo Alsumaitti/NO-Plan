@@ -43,8 +43,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={cn("min-h-[100dvh] flex flex-col md:flex-row bg-background text-foreground font-sans", lang === "ar" ? "direction-rtl" : "direction-ltr")}>
-      {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-sidebar border-b md:border-b-0 md:border-l border-sidebar-border shrink-0 md:h-[100dvh] sticky top-0 flex flex-col z-20">
+      {/* Sidebar (desktop only) */}
+      <aside className="hidden md:flex w-64 bg-sidebar md:border-l border-sidebar-border shrink-0 md:h-[100dvh] md:sticky md:top-0 flex-col z-20">
         {/* Brand */}
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center justify-between">
