@@ -128,13 +128,19 @@ export default function PrayerLaw() {
         if (!t) throw new Error("No timings");
         // Trim to HH:MM
         const clean = (s: string) => s.split(" ")[0].slice(0, 5);
-        setTimings({
+        const cleaned = {
           Fajr: clean(t.Fajr),
           Dhuhr: clean(t.Dhuhr),
           Asr: clean(t.Asr),
           Maghrib: clean(t.Maghrib),
           Isha: clean(t.Isha),
-        });
+        };
+        setTimings(cleaned);
+        // Cache so the NotificationCenter can surface prayer-window alerts
+        try {
+          const dateStr = `${yyyy}-${mm}-${dd}`;
+          localStorage.setItem(`no-prayer-timings-${dateStr}`, JSON.stringify(cleaned));
+        } catch { /* storage full — ignore */ }
       })
       .catch(() => setTimesError(isRTL ? "تعذّر تحميل أوقات الصلاة" : "Couldn't load prayer times"))
       .finally(() => setTimesBusy(false));
