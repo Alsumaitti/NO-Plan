@@ -9,6 +9,7 @@ import { Layout } from "@/components/layout";
 import NotFound from "@/pages/not-found";
 import Dashboard from "@/pages/dashboard";
 import DailyPlan from "@/pages/daily-plan";
+import PrayerLaw from "@/pages/prayer";
 import Tracker from "@/pages/tracker";
 import MasterRules from "@/pages/master-rules";
 import Review from "@/pages/review";
@@ -145,6 +146,7 @@ function AppContent() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/daily" component={DailyPlan} />
+        <Route path="/prayer" component={PrayerLaw} />
         <Route path="/tracker" component={Tracker} />
         <Route path="/master" component={MasterRules} />
         <Route path="/review" component={Review} />

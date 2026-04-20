@@ -12,9 +12,9 @@ import { motion, AnimatePresence } from "framer-motion";
 
 interface MasterRule {
   id: number;
-  rule: string;
-  reason?: string;
-  category?: string;
+  what: string;
+  why?: string | null;
+  category: string;
 }
 
 export default function MasterRules() {
@@ -45,12 +45,13 @@ export default function MasterRules() {
   const categories = settings?.customCategories?.length ? settings.customCategories : DEFAULT_CATEGORIES;
 
   const addMutation = useMutation({
-    mutationFn: async (data: { rule: string; reason?: string; category?: string }) => {
+    mutationFn: async (data: { what: string; why?: string; category: string }) => {
       const r = await authFetch("/api/master-rules", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      if (!r.ok) throw new Error(`${r.status}`);
       return r.json();
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["master-rules"] }); setNewRule(""); setNewReason(""); setNewCategory(""); setShowForm(false); },
@@ -65,7 +66,12 @@ export default function MasterRules() {
 
   const handleAdd = () => {
     if (!newRule.trim()) return;
-    addMutation.mutate({ rule: newRule.trim(), reason: newReason.trim() || undefined, category: newCategory || undefined });
+    const fallbackCategory = lang === "ar" ? "أخرى" : "Other";
+    addMutation.mutate({
+      what: newRule.trim(),
+      why: newReason.trim() || undefined,
+      category: newCategory || fallbackCategory,
+    });
   };
 
   return (
@@ -165,9 +171,9 @@ export default function MasterRules() {
                         <ShieldBan className="w-4 h-4 text-gold" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-ink">{rule.rule}</p>
-                        {rule.reason && (
-                          <p className="text-sm text-muted-foreground mt-1 font-serif italic">{rule.reason}</p>
+                        <p className="font-semibold text-ink">{rule.what}</p>
+                        {rule.why && (
+                          <p className="text-sm text-muted-foreground mt-1 font-serif italic">{rule.why}</p>
                         )}
                         {rule.category && (
                           <Badge variant="outline" className="text-xs mt-2">{rule.category}</Badge>

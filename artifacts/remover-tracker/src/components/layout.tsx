@@ -2,7 +2,7 @@ import { Link, useLocation } from "wouter";
 import { useClerk, useUser } from "@clerk/react";
 import {
   LayoutDashboard, CalendarDays, ListTodo, ShieldBan, RefreshCcw,
-  Lightbulb, Settings, LogOut, Sun, Moon, Globe, Flame, ChevronDown
+  Lightbulb, Settings, LogOut, Sun, Moon, Globe, Flame, ChevronDown, Star
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useApp } from "@/lib/AppContext";
@@ -11,11 +11,13 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthFetch } from "@/lib/apiClient";
+import { NotificationCenter } from "./NotificationCenter";
 
-function useNavItems(T: (k: string) => string) {
+function useNavItems(T: (k: string) => string, lang: string) {
   return [
     { href: "/", label: T("dashboard"), icon: LayoutDashboard },
     { href: "/daily", label: T("dailyPlan"), icon: CalendarDays },
+    { href: "/prayer", label: lang === "ar" ? "الفرض الجاي" : "Next Prayer", icon: Star },
     { href: "/tracker", label: T("log"), icon: ListTodo },
     { href: "/master", label: T("masterRules"), icon: ShieldBan },
     { href: "/review", label: T("review"), icon: RefreshCcw },
@@ -31,7 +33,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { T, lang, dark, setDark, setLang } = useApp();
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const authFetch = useAuthFetch();
-  const navItems = useNavItems(T);
+  const navItems = useNavItems(T, lang);
 
   const { data: stats } = useQuery<{ streak?: number }>({
     queryKey: ["dashboard-stats-streak"],
@@ -53,8 +55,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <p className="text-xs text-muted-foreground font-serif italic">{T("appTagline")}</p>
               </div>
             </div>
-            {/* Theme + Lang toggles */}
+            {/* Theme + Lang toggles + Notifications */}
             <div className="flex items-center gap-1">
+              <NotificationCenter />
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDark(!dark)} title={dark ? T("lightMode") : T("darkMode")}>
                 {dark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
               </Button>
@@ -152,6 +155,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <h1 className="text-sm font-bold text-gold-deep font-display truncate">{T("appName")}</h1>
           </div>
           <div className="flex items-center gap-1">
+            <NotificationCenter />
             {stats && (stats.streak ?? 0) > 0 && (
               <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-full px-2 py-1">
                 <Flame className="w-3.5 h-3.5 text-amber-500" />

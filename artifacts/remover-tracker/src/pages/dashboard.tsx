@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Flame, Trophy, TrendingUp, Clock, ShieldBan, Calendar, Activity, Star } from "lucide-react";
+import { Link } from "wouter";
+import { Flame, Trophy, TrendingUp, Clock, ShieldBan, Calendar, Activity, Star, AlertCircle, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApp } from "@/lib/AppContext";
 import { useAuthFetch } from "@/lib/apiClient";
@@ -73,6 +74,15 @@ export default function Dashboard() {
   const widgets = settings?.dashboardWidgets ?? ["stats", "streak", "activity", "categories", "lastLogin"];
   const showWidget = (key: string) => widgets.includes(key);
 
+  // Today's daily items for unfinished alert
+  const today = new Date().toISOString().split("T")[0];
+  const { data: todayItems = [] } = useQuery<{ id: number; what: string; done: boolean }[]>({
+    queryKey: ["daily-items", today],
+    queryFn: () => authFetch(`/api/daily-items?date=${today}`).then(r => r.json()),
+    staleTime: 30000,
+  });
+  const unfinishedCount = todayItems.filter(i => !i.done).length;
+
   if (isLoading) return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="w-8 h-8 border-4 border-gold border-t-transparent rounded-full animate-spin" />
@@ -99,6 +109,28 @@ export default function Dashboard() {
         <h2 className="text-3xl font-display font-bold text-ink">{T("dashboard")}</h2>
         <p className="text-muted-foreground mt-1 font-serif italic text-sm">{T("appMotto")}</p>
       </div>
+
+      {/* Unfinished today alert */}
+      {unfinishedCount > 0 && (
+        <Link href="/daily">
+          <div className="flex items-center gap-3 rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors cursor-pointer">
+            <div className="w-9 h-9 rounded-full bg-amber-200 dark:bg-amber-900 flex items-center justify-center shrink-0">
+              <AlertCircle className="w-4 h-4 text-amber-700 dark:text-amber-300" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                {lang === "ar"
+                  ? `لديك ${unfinishedCount} من خطط اليوم لم تكتمل بعد`
+                  : `You have ${unfinishedCount} unfinished plan${unfinishedCount === 1 ? "" : "s"} today`}
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-300/80 mt-0.5 truncate">
+                {lang === "ar" ? "اضغط لمراجعة خطتك اليوم" : "Tap to review today's plan"}
+              </p>
+            </div>
+            <ArrowRight className={`w-4 h-4 text-amber-700 dark:text-amber-300 shrink-0 ${lang === "ar" ? "rotate-180" : ""}`} />
+          </div>
+        </Link>
+      )}
 
       {/* KPI Stats */}
       {showWidget("stats") && (

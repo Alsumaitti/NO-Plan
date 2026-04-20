@@ -25,7 +25,7 @@ interface DailyItem {
   createdAt: string;
 }
 
-interface IfThenPlan { id: number; trigger: string; response: string; }
+interface IfThenPlan { id: number; date: string; ifCondition: string; thenAction: string; createdAt: string; }
 
 // ---------- Constants ----------
 const RISK_LABELS_AR = ["", "منخفض جدًّا", "منخفض", "متوسط", "عالٍ", "عالٍ جدًّا"];
@@ -260,11 +260,11 @@ export default function DailyPlan() {
   });
 
   const addIfThen = useMutation({
-    mutationFn: (data: { trigger: string; response: string }) =>
+    mutationFn: (data: { ifCondition: string; thenAction: string }) =>
       authFetch("/api/if-then", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, date: today }),
       }).then((r) => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`)))),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["if-then-plans"] });
@@ -794,7 +794,7 @@ export default function DailyPlan() {
                 className="w-full h-10 gap-2"
                 onClick={() => {
                   if (newTrigger.trim() && newResponse.trim()) {
-                    addIfThen.mutate({ trigger: newTrigger, response: newResponse });
+                    addIfThen.mutate({ ifCondition: newTrigger.trim(), thenAction: newResponse.trim() });
                   }
                 }}
                 disabled={!newTrigger.trim() || !newResponse.trim() || addIfThen.isPending}
@@ -822,11 +822,11 @@ export default function DailyPlan() {
                       <div className="flex-1 min-w-0 space-y-0.5">
                         <p className="text-xs">
                           <span className="text-muted-foreground">{isRTL ? "إذا" : "If"}</span>{" "}
-                          <span className="font-semibold text-foreground">{plan.trigger}</span>
+                          <span className="font-semibold text-foreground">{plan.ifCondition}</span>
                         </p>
                         <p className="text-xs">
                           <span className="text-muted-foreground">{isRTL ? "فإني" : "Then"}</span>{" "}
-                          <span className="font-semibold text-[hsl(var(--info))]">{plan.response}</span>
+                          <span className="font-semibold text-[hsl(var(--info))]">{plan.thenAction}</span>
                         </p>
                       </div>
                       <button
