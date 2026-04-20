@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, RefreshCcw, Search } from "lucide-react";
+import { ArrowLeft, RefreshCcw, Search, Download } from "lucide-react";
+import { exportSingleLog } from "@/lib/exportWorkbook";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { useApp } from "@/lib/AppContext";
@@ -76,12 +77,21 @@ export default function LogsReview() {
             <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
           </Button>
         </Link>
-        <div className="flex items-center gap-2">
-          <RefreshCcw className="w-5 h-5 text-purple-600" />
-          <h2 className="text-2xl font-display font-bold text-ink">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <RefreshCcw className="w-5 h-5 text-purple-600 shrink-0" />
+          <h2 className="text-2xl font-display font-bold text-ink truncate">
             {isRTL ? "سجل المراجعات الأسبوعية" : "Weekly Reviews Log"}
           </h2>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportSingleLog("review", authFetch, lang)}
+          className="gap-1.5 shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">{isRTL ? "تحميل" : "Download"}</span>
+        </Button>
       </div>
 
       <div className="relative">

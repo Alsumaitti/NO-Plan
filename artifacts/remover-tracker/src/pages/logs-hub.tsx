@@ -2,10 +2,13 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  ShieldBan, Star, Zap, Target, RefreshCcw, ScrollText, ArrowRight, ListTodo,
+  ShieldBan, Star, Zap, Target, RefreshCcw, ScrollText, ArrowRight, ListTodo, Archive,
 } from "lucide-react";
 import { useApp } from "@/lib/AppContext";
 import { useAuthFetch } from "@/lib/apiClient";
+import { Button } from "@/components/ui/button";
+import { exportWorkbook } from "@/lib/exportWorkbook";
+import { useState } from "react";
 
 interface LogCardProps {
   href: string;
@@ -55,6 +58,15 @@ export default function LogsHub() {
   const { lang } = useApp();
   const authFetch = useAuthFetch();
   const isRTL = lang === "ar";
+  const [exporting, setExporting] = useState(false);
+
+  const downloadAll = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try { await exportWorkbook(authFetch, lang); }
+    catch (err) { console.error("export failed", err); }
+    finally { setExporting(false); }
+  };
 
   // Pull counts for each log type
   const logsQ = useQuery<{ id: number; source?: string; category?: string }[]>({
@@ -114,19 +126,31 @@ export default function LogsHub() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center">
-            <ScrollText className="w-5 h-5 text-gold" />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center shrink-0">
+              <ScrollText className="w-5 h-5 text-gold" />
+            </div>
+            <h2 className="text-3xl font-display font-bold text-ink truncate">
+              {isRTL ? "السجلات" : "Logs"}
+            </h2>
           </div>
-          <h2 className="text-3xl font-display font-bold text-ink">
-            {isRTL ? "السجلات" : "Logs"}
-          </h2>
+          <Button
+            onClick={downloadAll}
+            disabled={exporting}
+            className="gap-2 bg-gold hover:bg-gold-deep text-ink shrink-0"
+          >
+            <Archive className="w-4 h-4" />
+            {exporting
+              ? (isRTL ? "جاري التحضير..." : "Preparing...")
+              : (isRTL ? "تحميل كل السجلات (XLSX)" : "Download All Logs (XLSX)")}
+          </Button>
         </div>
         <p className="text-muted-foreground text-sm max-w-2xl leading-relaxed">
           {isRTL
-            ? "كل نوع من القرارات له سجله الخاص. اختر السجل الذي تريد استعراضه."
-            : "Each type of decision has its own dedicated log. Pick one to explore."}
+            ? "كل نوع من القرارات له سجله الخاص. اختر السجل لاستعراضه أو حمّله بشكل منفصل من داخله، أو حمّلها كلها في ملف واحد من الأعلى."
+            : "Each type of decision has its own dedicated log. Open one to browse it and download it on its own, or grab everything in a single XLSX above."}
         </p>
       </div>
 

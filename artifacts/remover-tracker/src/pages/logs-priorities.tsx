@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Target, Search } from "lucide-react";
+import { ArrowLeft, Target, Search, Download } from "lucide-react";
+import { exportSingleLog } from "@/lib/exportWorkbook";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { useApp } from "@/lib/AppContext";
@@ -47,12 +48,21 @@ export default function LogsPriorities() {
             <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
           </Button>
         </Link>
-        <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-teal" />
-          <h2 className="text-2xl font-display font-bold text-ink">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Target className="w-5 h-5 text-teal shrink-0" />
+          <h2 className="text-2xl font-display font-bold text-ink truncate">
             {isRTL ? "سجل الأولويات اليومية" : "Daily Priorities Log"}
           </h2>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportSingleLog("priorities", authFetch, lang)}
+          className="gap-1.5 shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">{isRTL ? "تحميل" : "Download"}</span>
+        </Button>
       </div>
 
       <div className="relative">

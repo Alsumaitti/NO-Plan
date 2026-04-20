@@ -76,11 +76,22 @@ export default function Tracker() {
     staleTime: 30000,
   });
 
+  // Removals log excludes specialized-domain entries (prayer / review)
+  // — those have their own dedicated logs under /logs/prayer and /logs/review.
+  const SPECIALIZED_TAGS = [
+    "قانون الفرض الجاي", "Next Prayer Law",
+    "مراجعة أسبوعية", "Weekly Review",
+  ];
+  const isSpecialized = (e: LogEntry) =>
+    SPECIALIZED_TAGS.includes(e.source ?? "") || SPECIALIZED_TAGS.includes(e.category ?? "");
+
+  const removalEntries = useMemo(() => entries.filter(e => !isSpecialized(e)), [entries]);
+
   const filtered = useMemo(() => {
-    if (!searchTerm.trim()) return entries;
+    if (!searchTerm.trim()) return removalEntries;
     const q = searchTerm.toLowerCase();
-    return entries.filter(e => e.what?.toLowerCase().includes(q) || e.source?.toLowerCase().includes(q) || e.note?.toLowerCase().includes(q));
-  }, [entries, searchTerm]);
+    return removalEntries.filter(e => e.what?.toLowerCase().includes(q) || e.source?.toLowerCase().includes(q) || e.note?.toLowerCase().includes(q));
+  }, [removalEntries, searchTerm]);
 
   const saveMutation = useMutation({
     mutationFn: async (entry: Partial<LogEntry>) => {

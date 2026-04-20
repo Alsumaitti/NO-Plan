@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, ShieldBan, Search } from "lucide-react";
+import { ArrowLeft, ShieldBan, Search, Download } from "lucide-react";
+import { exportSingleLog } from "@/lib/exportWorkbook";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { useApp } from "@/lib/AppContext";
@@ -12,8 +13,9 @@ import { useAuthFetch } from "@/lib/apiClient";
 
 interface MasterRule {
   id: number;
-  rule: string;
-  reason?: string | null;
+  what: string;
+  category?: string | null;
+  why?: string | null;
   createdAt?: string;
 }
 
@@ -34,8 +36,9 @@ export default function LogsBans() {
     const data = rulesQ.data ?? [];
     const out = q.trim()
       ? data.filter(r =>
-          r.rule.toLowerCase().includes(q.toLowerCase()) ||
-          (r.reason ?? "").toLowerCase().includes(q.toLowerCase()),
+          r.what.toLowerCase().includes(q.toLowerCase()) ||
+          (r.why ?? "").toLowerCase().includes(q.toLowerCase()) ||
+          (r.category ?? "").toLowerCase().includes(q.toLowerCase()),
         )
       : data;
     return [...out].sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? ""));
@@ -49,12 +52,21 @@ export default function LogsBans() {
             <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
           </Button>
         </Link>
-        <div className="flex items-center gap-2">
-          <ShieldBan className="w-5 h-5 text-red-600" />
-          <h2 className="text-2xl font-display font-bold text-ink">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <ShieldBan className="w-5 h-5 text-red-600 shrink-0" />
+          <h2 className="text-2xl font-display font-bold text-ink truncate">
             {isRTL ? "قائمة المنع الدائمة" : "Permanent Ban List"}
           </h2>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportSingleLog("bans", authFetch, lang)}
+          className="gap-1.5 shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">{isRTL ? "تحميل" : "Download"}</span>
+        </Button>
       </div>
 
       <div className="relative">
@@ -91,10 +103,15 @@ export default function LogsBans() {
                     <span className="text-xs font-bold text-red-700 dark:text-red-300">{i + 1}</span>
                   </div>
                   <div className="flex-1 min-w-0 space-y-1">
-                    <p className="font-semibold text-ink leading-relaxed break-words">{r.rule}</p>
-                    {r.reason && (
+                    <p className="font-semibold text-ink leading-relaxed break-words">{r.what}</p>
+                    {r.category && (
+                      <p className="text-[11px] text-muted-foreground/90">
+                        {isRTL ? "الفئة: " : "Category: "}{r.category}
+                      </p>
+                    )}
+                    {r.why && (
                       <p className="text-sm text-muted-foreground leading-relaxed italic break-words">
-                        {isRTL ? "السبب: " : "Reason: "}{r.reason}
+                        {isRTL ? "السبب: " : "Reason: "}{r.why}
                       </p>
                     )}
                     {r.createdAt && (

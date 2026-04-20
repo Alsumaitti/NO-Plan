@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Zap, Search } from "lucide-react";
+import { ArrowLeft, Zap, Search, Download } from "lucide-react";
+import { exportSingleLog } from "@/lib/exportWorkbook";
 import { format, parseISO } from "date-fns";
 import { arSA, enUS } from "date-fns/locale";
 import { useApp } from "@/lib/AppContext";
@@ -12,9 +13,8 @@ import { useAuthFetch } from "@/lib/apiClient";
 
 interface IfThenPlan {
   id: number;
-  trigger: string;
-  response: string;
-  category?: string | null;
+  ifCondition: string;
+  thenAction: string;
   createdAt?: string;
   date?: string;
 }
@@ -36,9 +36,8 @@ export default function LogsTriggers() {
     const data = plansQ.data ?? [];
     const filtered = q.trim()
       ? data.filter(p =>
-          p.trigger.toLowerCase().includes(q.toLowerCase()) ||
-          p.response.toLowerCase().includes(q.toLowerCase()) ||
-          (p.category ?? "").toLowerCase().includes(q.toLowerCase()),
+          p.ifCondition.toLowerCase().includes(q.toLowerCase()) ||
+          p.thenAction.toLowerCase().includes(q.toLowerCase()),
         )
       : data;
     const byDate = new Map<string, IfThenPlan[]>();
@@ -58,12 +57,21 @@ export default function LogsTriggers() {
             <ArrowLeft className={`w-4 h-4 ${isRTL ? "rotate-180" : ""}`} />
           </Button>
         </Link>
-        <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-sky-600" />
-          <h2 className="text-2xl font-display font-bold text-ink">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Zap className="w-5 h-5 text-sky-600 shrink-0" />
+          <h2 className="text-2xl font-display font-bold text-ink truncate">
             {isRTL ? "سجل المحفزات (إذا-فإنني)" : "If-Then Triggers Log"}
           </h2>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => exportSingleLog("triggers", authFetch, lang)}
+          className="gap-1.5 shrink-0"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">{isRTL ? "تحميل" : "Download"}</span>
+        </Button>
       </div>
 
       <div className="relative">
@@ -101,19 +109,14 @@ export default function LogsTriggers() {
                         <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/40 px-2 py-0.5 rounded shrink-0 mt-0.5">
                           {isRTL ? "إذا" : "IF"}
                         </span>
-                        <p className="text-sm text-foreground leading-relaxed">{p.trigger}</p>
+                        <p className="text-sm text-foreground leading-relaxed">{p.ifCondition}</p>
                       </div>
                       <div className="flex items-start gap-2">
                         <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 bg-teal-100 dark:bg-teal-950/40 px-2 py-0.5 rounded shrink-0 mt-0.5">
                           {isRTL ? "فإنني" : "THEN"}
                         </span>
-                        <p className="text-sm text-foreground leading-relaxed">{p.response}</p>
+                        <p className="text-sm text-foreground leading-relaxed">{p.thenAction}</p>
                       </div>
-                      {p.category && (
-                        <p className="text-[11px] text-muted-foreground pt-1">
-                          {isRTL ? "الفئة:" : "Category:"} {p.category}
-                        </p>
-                      )}
                     </CardContent>
                   </Card>
                 ))}

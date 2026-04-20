@@ -527,13 +527,14 @@ export function NotificationCenter() {
             transition={{ duration: 0.15 }}
             style={{ width: "min(380px, calc(100vw - 24px))" }}
             className={[
-              // Mobile: anchor to screen edge
-              "fixed top-14 sm:top-full sm:mt-2",
-              isRTL ? "left-3" : "right-3",
-              // Desktop: anchor to bell's inward edge (opens toward main content)
-              // LTR: sidebar on LEFT → dropdown's LEFT aligns with bell's LEFT (extends right into main)
-              // RTL: sidebar on RIGHT → dropdown's RIGHT aligns with bell's RIGHT (extends left into main)
-              isRTL ? "sm:left-auto sm:right-0" : "sm:right-auto sm:left-0",
+              // Mobile: fixed to viewport edge under top bar
+              "fixed top-14 sm:top-auto",
+              isRTL ? "left-3 sm:left-auto" : "right-3 sm:right-auto",
+              // Desktop: absolute anchored to bell's root div so it opens toward main
+              "sm:absolute sm:top-full sm:mt-2",
+              // LTR sidebar on left → dropdown extends RIGHT from the bell
+              // RTL sidebar on right → dropdown extends LEFT from the bell
+              isRTL ? "sm:right-0" : "sm:left-0",
               "bg-card border border-border rounded-xl shadow-2xl overflow-hidden z-[60]",
             ].join(" ")}
           >
